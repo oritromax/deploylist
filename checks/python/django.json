@@ -1,0 +1,169 @@
+{
+  "$schema": "../../schema/layer.schema.json",
+  "schema_version": 1,
+  "id": "python.django",
+  "kind": "framework",
+  "name": "Django",
+  "extends": [
+    "universal",
+    "python"
+  ],
+  "checks": [
+    {
+      "id": "python.django.debug-off",
+      "title": "DEBUG is False in the production settings",
+      "category": "security",
+      "severity": "critical",
+      "why": "With DEBUG on, Django's error page prints the full traceback, local variables, settings and a partial view of the environment to anyone who can trigger an exception. It also disables ALLOWED_HOSTS enforcement.",
+      "action": "Set DEBUG to False in the production settings module, sourcing it from the environment rather than from a hardcoded literal that can be flipped by accident.",
+      "verify": {
+        "cmd": "grep -rnE '^DEBUG' --include=*.py . 2>/dev/null | head -5",
+        "expect": "The production path resolves DEBUG to False. A literal True anywhere on the production settings path is a ship-blocker."
+      },
+      "references": [
+        "https://docs.djangoproject.com/en/stable/ref/settings/"
+      ],
+      "added": "2026-08-21"
+    },
+    {
+      "id": "python.django.secret-key-not-hardcoded",
+      "title": "SECRET_KEY is loaded from the environment, not committed",
+      "category": "secrets",
+      "severity": "critical",
+      "why": "SECRET_KEY signs sessions, password reset tokens and signed cookies. A key left in the repository lets anyone who reads it forge a session or a reset link for any account.",
+      "action": "Load SECRET_KEY from the environment or a secret store, and rotate it if it was ever committed. Rotation invalidates active sessions and outstanding reset links.",
+      "verify": {
+        "cmd": "grep -rnE '^SECRET_KEY' --include=*.py . 2>/dev/null | head -5",
+        "expect": "The value comes from an environment lookup. A quoted literal in a tracked file means the key is public and must be rotated."
+      },
+      "references": [
+        "https://docs.djangoproject.com/en/stable/ref/settings/"
+      ],
+      "added": "2026-08-21"
+    },
+    {
+      "id": "python.django.allowed-hosts-set",
+      "title": "ALLOWED_HOSTS names the domains you actually serve",
+      "category": "security",
+      "severity": "critical",
+      "why": "An empty or wildcard ALLOWED_HOSTS lets a forged Host header poison password reset links and any absolute URL the application builds, sending your users to an attacker's domain with a valid token.",
+      "action": "List the exact domains you serve. If you need a wildcard for a platform health check, scope it to the platform's internal hostname rather than to everything.",
+      "verify": {
+        "cmd": "grep -rnE '^ALLOWED_HOSTS' --include=*.py . 2>/dev/null | head -5",
+        "expect": "A concrete list of your domains. An empty list with DEBUG off blocks every request, and a bare wildcard defeats the protection."
+      },
+      "references": [
+        "https://docs.djangoproject.com/en/stable/ref/settings/"
+      ],
+      "added": "2026-08-21"
+    },
+    {
+      "id": "python.django.https-settings-enabled",
+      "title": "HTTPS and secure cookie settings are enabled",
+      "category": "security",
+      "severity": "high",
+      "why": "Without these, session and CSRF cookies travel over plaintext whenever a request arrives on HTTP, and there is nothing telling the browser to stay on HTTPS for subsequent visits.",
+      "action": "Enable SECURE_SSL_REDIRECT, SESSION_COOKIE_SECURE and CSRF_COOKIE_SECURE, and set a Strict-Transport-Security max age once you are confident the certificate chain is stable.",
+      "verify": {
+        "cmd": "grep -rnE '^(SECURE_SSL_REDIRECT|SESSION_COOKIE_SECURE|CSRF_COOKIE_SECURE|SECURE_HSTS_SECONDS)' --include=*.py . 2>/dev/null | head -8",
+        "expect": "All three cookie and redirect settings are True on the production path, and an HSTS max age is set."
+      },
+      "references": [
+        "https://docs.djangoproject.com/en/stable/topics/security/"
+      ],
+      "added": "2026-08-21"
+    },
+    {
+      "id": "python.django.deployment-check-clean",
+      "title": "The framework's own deployment check reports no issues",
+      "category": "security",
+      "severity": "high",
+      "why": "Django ships a deployment check that inspects the resolved settings and reports the specific misconfigurations that matter in production. It catches combinations that reading individual settings files will miss.",
+      "action": "Have the operator run the deployment check against the production settings module on the deployed host, and resolve everything it reports before switching traffic over.",
+      "verify": {
+        "suggest": "python manage.py check --deploy",
+        "expect": "No issues are reported, or each remaining one has a written justification for why it does not apply to this deployment."
+      },
+      "references": [
+        "https://docs.djangoproject.com/en/stable/howto/deployment/checklist/"
+      ],
+      "added": "2026-08-21"
+    },
+    {
+      "id": "python.django.static-files-collected",
+      "title": "STATIC_ROOT is configured and static files are collected at deploy",
+      "category": "config",
+      "severity": "high",
+      "why": "With DEBUG off Django stops serving static files itself. If nothing collects them to a directory the web server can reach, the deployed site loads with no CSS, no JavaScript and no admin styling.",
+      "action": "Set STATIC_ROOT, run the collect step during the deploy, and serve that directory from your web server or CDN rather than from the application process.",
+      "verify": {
+        "cmd": "grep -rnE '^(STATIC_ROOT|STATIC_URL|STATICFILES_STORAGE)' --include=*.py . 2>/dev/null | head -5",
+        "expect": "STATIC_ROOT points at a real directory that the deploy populates and the web server serves."
+      },
+      "references": [
+        "https://docs.djangoproject.com/en/stable/howto/static-files/deployment/"
+      ],
+      "added": "2026-08-21"
+    },
+    {
+      "id": "python.django.migrations-applied",
+      "title": "No migration is left unapplied against the production database",
+      "category": "reliability",
+      "severity": "high",
+      "why": "Code that expects a column the database does not have fails at the first request that touches it, and the failure appears as an unrelated database error rather than as a deploy problem.",
+      "action": "Have the operator list the migration state against the production database before traffic is switched over, and apply anything outstanding as an explicit deploy step.",
+      "verify": {
+        "suggest": "python manage.py showmigrations --plan",
+        "expect": "Every migration is marked as applied. Anything unapplied must be run deliberately, not left to the first request."
+      },
+      "references": [
+        "https://docs.djangoproject.com/en/stable/topics/migrations/"
+      ],
+      "added": "2026-08-21"
+    },
+    {
+      "id": "python.django.logging-configured",
+      "title": "Logging is configured to surface production errors",
+      "category": "observability",
+      "severity": "recommended",
+      "why": "Django's default configuration only mails admins on a 500 and writes little else. Without explicit logging, an error that does not raise an exception leaves no trace at all.",
+      "action": "Define a LOGGING configuration that writes structured records to stdout or a collector, set a sensible level for the django logger, and connect it to whatever you actually read.",
+      "verify": {
+        "cmd": "grep -rnE '^LOGGING' --include=*.py . 2>/dev/null | head -3",
+        "expect": "A LOGGING configuration exists on the production settings path and points somewhere a person will see."
+      },
+      "references": [
+        "https://docs.djangoproject.com/en/stable/topics/logging/"
+      ],
+      "added": "2026-08-21"
+    },
+    {
+      "id": "python.django.admin-access-restricted",
+      "title": "Access to the admin site is restricted beyond a password",
+      "category": "security",
+      "severity": "recommended",
+      "why": "The admin is a full database editor reachable at a predictable path. Credential stuffing against it is constant and automated, and one reused staff password is enough to lose everything.",
+      "action": "Put the admin behind network restrictions, a second factor, or both. Moving it off the default path raises the bar against untargeted scanning but is not a control on its own.",
+      "verify": {
+        "manual": "Open the admin path from an address outside your office or VPN and confirm that something other than the password form stops you before you reach a login."
+      },
+      "references": [
+        "https://docs.djangoproject.com/en/stable/ref/contrib/admin/"
+      ],
+      "added": "2026-08-21"
+    },
+    {
+      "id": "python.django.production-database-choice",
+      "title": "The production database engine suits the deployment",
+      "category": "reliability",
+      "severity": "optional",
+      "subjective": true,
+      "why": "SQLite is a genuinely good fit for a low-traffic single-process deployment and a poor one behind several workers writing concurrently. Which side you are on depends on your traffic and your hosting.",
+      "action": "Consider whether the configured engine matches how many processes will write concurrently and what your backup and restore story needs to be.",
+      "references": [
+        "https://docs.djangoproject.com/en/stable/ref/databases/"
+      ],
+      "added": "2026-08-21"
+    }
+  ]
+}

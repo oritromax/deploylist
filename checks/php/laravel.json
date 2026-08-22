@@ -1,0 +1,170 @@
+{
+  "$schema": "../../schema/layer.schema.json",
+  "schema_version": 1,
+  "id": "php.laravel",
+  "kind": "framework",
+  "name": "Laravel",
+  "extends": [
+    "universal",
+    "php"
+  ],
+  "checks": [
+    {
+      "id": "php.laravel.app-debug-off",
+      "title": "APP_DEBUG is false and APP_ENV is production",
+      "category": "security",
+      "severity": "critical",
+      "why": "With debug on, Laravel's error page prints the stack trace, the resolved config and every environment variable, including database and mail credentials, to whoever triggered the error.",
+      "action": "Set APP_ENV to production and APP_DEBUG to false in the production environment, then confirm no deploy step overwrites them.",
+      "verify": {
+        "cmd": "grep -hE '^APP_(ENV|DEBUG)=' .env .env.production 2>/dev/null",
+        "expect": "APP_ENV is production and APP_DEBUG is false. If nothing prints, confirm both are set in the host environment."
+      },
+      "references": [
+        "https://laravel.com/docs/12.x/configuration"
+      ],
+      "added": "2026-08-21"
+    },
+    {
+      "id": "php.laravel.app-key-set",
+      "title": "APP_KEY is set to a generated value",
+      "category": "security",
+      "severity": "critical",
+      "why": "APP_KEY encrypts sessions and signed URLs. An empty key breaks encryption outright, and a key copied from a public skeleton or tutorial lets anyone forge a session cookie for your application.",
+      "action": "Generate a unique key for the production environment and store it as a secret. Rotating it invalidates existing sessions and any encrypted column, so plan it deliberately.",
+      "verify": {
+        "cmd": "grep -hE '^APP_KEY=' .env .env.production 2>/dev/null",
+        "expect": "A non-empty base64 value that is unique to this deployment and not shared with any other environment."
+      },
+      "references": [
+        "https://laravel.com/docs/12.x/encryption"
+      ],
+      "added": "2026-08-21"
+    },
+    {
+      "id": "php.laravel.config-and-route-cache",
+      "title": "Config, routes, views and events are cached in production",
+      "category": "performance",
+      "severity": "high",
+      "why": "Without the caches, every request re-parses every config file and re-registers every route. On a medium application this is routinely the largest fixed cost in the request, before any of your code runs.",
+      "action": "Run the config, route, view and event cache commands as part of the deploy, after the code is in place and before traffic is switched over.",
+      "verify": {
+        "cmd": "ls bootstrap/cache/config.php bootstrap/cache/routes-v7.php bootstrap/cache/events.php 2>/dev/null | head -5",
+        "expect": "The cache files exist. If they do not, confirm the deploy script generates them rather than relying on the first request."
+      },
+      "references": [
+        "https://laravel.com/docs/12.x/deployment"
+      ],
+      "added": "2026-08-21"
+    },
+    {
+      "id": "php.laravel.queue-not-sync",
+      "title": "The queue connection is not sync in production",
+      "category": "performance",
+      "severity": "high",
+      "why": "The sync driver runs every queued job inside the request that dispatched it, so a queued email or export blocks the user and ties response time to a third party you do not control.",
+      "action": "Point QUEUE_CONNECTION at a real driver such as redis or database, and run a supervised worker process alongside the application.",
+      "verify": {
+        "cmd": "grep -hE '^QUEUE_CONNECTION=' .env .env.production 2>/dev/null",
+        "expect": "A real queue driver rather than sync. If nothing prints, the framework default applies and should be set explicitly."
+      },
+      "references": [
+        "https://laravel.com/docs/12.x/queues"
+      ],
+      "added": "2026-08-21"
+    },
+    {
+      "id": "php.laravel.secure-session-cookies",
+      "title": "Session cookies are marked secure and http-only",
+      "category": "security",
+      "severity": "high",
+      "why": "Without the secure flag the session cookie is sent over any plaintext request, and without http-only any cross-site scripting flaw upgrades directly into full session theft.",
+      "action": "Set SESSION_SECURE_COOKIE to true, leave http-only enabled, and set SESSION_SAME_SITE to lax or strict for the flows your application supports.",
+      "verify": {
+        "cmd": "grep -hE '^SESSION_(SECURE_COOKIE|SAME_SITE|DOMAIN)=' .env .env.production 2>/dev/null",
+        "expect": "SESSION_SECURE_COOKIE is true, and SESSION_SAME_SITE is lax or strict."
+      },
+      "references": [
+        "https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html"
+      ],
+      "added": "2026-08-21"
+    },
+    {
+      "id": "php.laravel.debug-tooling-not-in-production",
+      "title": "Telescope, Debugbar and Ignition are not installed in production",
+      "category": "security",
+      "severity": "critical",
+      "why": "Telescope records every request, query and job payload behind a route that is easy to leave unprotected. Ignition has previously carried a remote code execution flaw reachable whenever debug mode is on.",
+      "action": "Require these packages under require-dev only, and confirm the production install omits dev dependencies so their service providers never register.",
+      "verify": {
+        "cmd": "composer show --installed --no-dev 2>&1 | grep -iE 'telescope|debugbar|ignition' | head -5",
+        "expect": "Nothing is printed. Any match means a debug package is present in the production dependency set."
+      },
+      "references": [
+        "https://laravel.com/docs/12.x/telescope"
+      ],
+      "added": "2026-08-21"
+    },
+    {
+      "id": "php.laravel.storage-link-present",
+      "title": "The public storage symlink exists",
+      "category": "config",
+      "severity": "recommended",
+      "why": "Without the symlink every user upload served from public storage returns a 404. The failure is silent at deploy time and only shows up when someone loads a page with an uploaded image on it.",
+      "action": "Create the storage symlink as part of the deploy, and make sure the deploy is repeatable if the release directory is replaced each time.",
+      "verify": {
+        "cmd": "ls -l public/storage 2>/dev/null",
+        "expect": "A symlink pointing at the storage app public directory."
+      },
+      "references": [
+        "https://laravel.com/docs/12.x/filesystem"
+      ],
+      "added": "2026-08-21"
+    },
+    {
+      "id": "php.laravel.log-level-tuned",
+      "title": "The production log level is not debug",
+      "category": "observability",
+      "severity": "recommended",
+      "why": "At debug level Laravel logs full query bindings and request payloads, which fills the disk quickly and writes user data, tokens and password reset values into plaintext log files.",
+      "action": "Set LOG_LEVEL to warning or error in production, use a channel with rotation, and ship logs somewhere with retention rules rather than leaving them on disk.",
+      "verify": {
+        "cmd": "grep -hE '^LOG_(CHANNEL|LEVEL)=' .env .env.production 2>/dev/null",
+        "expect": "LOG_LEVEL is warning or stricter, and LOG_CHANNEL points at a rotating or forwarded channel rather than a single file."
+      },
+      "references": [
+        "https://laravel.com/docs/12.x/logging"
+      ],
+      "added": "2026-08-21"
+    },
+    {
+      "id": "php.laravel.environment-summary-reviewed",
+      "title": "The reported environment summary matches what you intended to deploy",
+      "category": "config",
+      "severity": "recommended",
+      "why": "Laravel resolves configuration from several layers, and a cached config file built in the wrong environment will keep serving stale values that no environment file explains.",
+      "action": "Have the operator print the framework's own environment summary on the deployed host and compare the environment, debug flag, cache drivers and queue connection against what was intended.",
+      "verify": {
+        "suggest": "php artisan about",
+        "expect": "Environment is production, debug is off, and the cache, session and queue drivers match the infrastructure you actually run."
+      },
+      "references": [
+        "https://laravel.com/docs/12.x/deployment"
+      ],
+      "added": "2026-08-21"
+    },
+    {
+      "id": "php.laravel.migrations-reversible",
+      "title": "Destructive migrations have been reviewed before release",
+      "category": "reliability",
+      "severity": "optional",
+      "subjective": true,
+      "why": "A migration that drops or renames a column is irreversible in practice once traffic resumes, and rolling back the application code will not bring the data back. How much ceremony this deserves depends on your data.",
+      "action": "Consider reviewing the pending migrations for column drops and renames, and splitting them into an additive release followed by a cleanup release once nothing reads the old shape.",
+      "references": [
+        "https://laravel.com/docs/12.x/migrations"
+      ],
+      "added": "2026-08-21"
+    }
+  ]
+}

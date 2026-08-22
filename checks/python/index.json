@@ -1,0 +1,76 @@
+{
+  "$schema": "../../schema/layer.schema.json",
+  "schema_version": 1,
+  "id": "python",
+  "kind": "language",
+  "name": "Python",
+  "extends": [
+    "universal"
+  ],
+  "checks": [
+    {
+      "id": "python.dependencies-pinned",
+      "title": "Production dependencies are pinned to exact versions",
+      "category": "build",
+      "severity": "high",
+      "why": "An unpinned requirement resolves at install time, so production can receive a release that was published after the code was tested. This is also the window a compromised package upload exploits.",
+      "action": "Pin every production requirement to an exact version, generated from a resolver lock rather than edited by hand, and install with hashes where your toolchain supports it.",
+      "verify": {
+        "cmd": "grep -cE '==' requirements.txt 2>/dev/null ; grep -c 'name =' pyproject.toml 2>/dev/null",
+        "expect": "Every production requirement carries an exact version, or the project uses a lock file that does."
+      },
+      "references": [
+        "https://docs.python.org/3/installing/index.html"
+      ],
+      "added": "2026-08-21"
+    },
+    {
+      "id": "python.virtualenv-not-committed",
+      "title": "No virtual environment directory is tracked in git",
+      "category": "build",
+      "severity": "recommended",
+      "why": "A committed environment carries compiled platform-specific binaries and often a pip config or token file. It also makes every dependency change an unreviewable diff of thousands of files.",
+      "action": "Remove the environment directory from the index, add it to .gitignore, and rebuild it from the pinned requirements in the deploy.",
+      "verify": {
+        "cmd": "git ls-files venv .venv env virtualenv | head -5",
+        "expect": "Nothing is listed. Any path echoed back is a tracked environment directory."
+      },
+      "references": [
+        "https://docs.python.org/3/library/venv.html"
+      ],
+      "added": "2026-08-21"
+    },
+    {
+      "id": "python.bytecode-not-committed",
+      "title": "No compiled bytecode is tracked in git",
+      "category": "build",
+      "severity": "optional",
+      "why": "Stale .pyc files tracked in git can shadow the source they were built from on an interpreter that trusts them, producing a deploy that runs code no longer present in the repository.",
+      "action": "Remove any tracked bytecode from the index and add the cache directories to .gitignore.",
+      "verify": {
+        "cmd": "git ls-files '*.pyc' '*.pyo' | head -5",
+        "expect": "Nothing is listed."
+      },
+      "references": [
+        "https://docs.python.org/3/tutorial/modules.html"
+      ],
+      "added": "2026-08-21"
+    },
+    {
+      "id": "python.dependency-conflicts-resolved",
+      "title": "The installed dependency set has no unresolved conflicts",
+      "category": "reliability",
+      "severity": "recommended",
+      "why": "Pip will complete an install that leaves incompatible versions in place, and the resulting failure surfaces later as an import error or a subtle behaviour change rather than as a failed deploy.",
+      "action": "Run a dependency consistency check as part of the build and fail the build on conflicts rather than discovering them in production.",
+      "verify": {
+        "cmd": "pip check 2>&1 | head -10",
+        "expect": "No broken requirements are reported."
+      },
+      "references": [
+        "https://docs.python.org/3/installing/index.html"
+      ],
+      "added": "2026-08-21"
+    }
+  ]
+}

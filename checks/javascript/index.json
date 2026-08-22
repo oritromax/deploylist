@@ -1,0 +1,92 @@
+{
+  "$schema": "../../schema/layer.schema.json",
+  "schema_version": 1,
+  "id": "javascript",
+  "kind": "language",
+  "name": "JavaScript and TypeScript",
+  "extends": [
+    "universal"
+  ],
+  "checks": [
+    {
+      "id": "javascript.lockfile-committed",
+      "title": "A dependency lockfile is committed",
+      "category": "build",
+      "severity": "high",
+      "why": "Without a lockfile, production resolves versions independently of what was tested, so a deploy can install a release nobody has ever run. It is also how most dependency confusion attacks land.",
+      "action": "Commit exactly one lockfile for the package manager you use, and install from it in production with a frozen install rather than a fresh resolve.",
+      "verify": {
+        "cmd": "git ls-files package-lock.json yarn.lock pnpm-lock.yaml bun.lockb | head -5",
+        "expect": "Exactly one lockfile is listed. Zero means nothing is pinned, more than one means two package managers are fighting."
+      },
+      "references": [
+        "https://docs.npmjs.com/cli/v10/configuring-npm/package-lock-json"
+      ],
+      "added": "2026-08-21"
+    },
+    {
+      "id": "javascript.node-version-pinned",
+      "title": "The Node version is pinned for the deploy environment",
+      "category": "build",
+      "severity": "recommended",
+      "why": "Hosts pick a default Node major when nothing declares one, and that default moves. A silent major bump can change TLS behaviour, crypto defaults and native module compatibility mid-deploy.",
+      "action": "Declare the Node version in the engines field of package.json, and mirror it in .nvmrc so local development matches production.",
+      "verify": {
+        "cmd": "ls .nvmrc .node-version 2>/dev/null | head -3 ; grep -n 'engines' package.json",
+        "expect": "A version file exists, or package.json declares an engines field naming a Node major."
+      },
+      "references": [
+        "https://nodejs.org/en/about/previous-releases"
+      ],
+      "added": "2026-08-21"
+    },
+    {
+      "id": "javascript.no-dev-dependencies-in-production",
+      "title": "Production installs omit dev dependencies",
+      "category": "build",
+      "severity": "high",
+      "why": "Dev dependencies ship test fixtures, build tooling and their transitive trees to production. They enlarge the artifact and the attack surface without running a single line of application code.",
+      "action": "Install with the production or omit-dev flag in the deploy step, and confirm nothing at runtime imports a package listed under devDependencies.",
+      "verify": {
+        "cmd": "npm ls --omit=dev --depth 0 2>&1 | head -20",
+        "expect": "The tree resolves with no missing packages, meaning the application runs without anything from devDependencies."
+      },
+      "references": [
+        "https://docs.npmjs.com/cli/v10/commands/npm-ci"
+      ],
+      "added": "2026-08-21"
+    },
+    {
+      "id": "javascript.dependency-audit-reviewed",
+      "title": "Known vulnerabilities in production dependencies have been reviewed",
+      "category": "security",
+      "severity": "recommended",
+      "why": "Most JavaScript projects carry hundreds of transitive packages. An advisory in one of them is the cheapest way into an application that is otherwise well written.",
+      "action": "Run an audit against production dependencies only, then either upgrade or record why each remaining advisory does not apply to how you use the package.",
+      "verify": {
+        "cmd": "npm audit --omit=dev 2>&1 | head -20",
+        "expect": "No high or critical advisories, or a written note explaining why each remaining one is not exploitable here."
+      },
+      "references": [
+        "https://docs.npmjs.com/cli/v10/commands/npm-audit"
+      ],
+      "added": "2026-08-21"
+    },
+    {
+      "id": "javascript.no-source-maps-in-production",
+      "title": "Source maps are not published to production",
+      "category": "security",
+      "severity": "high",
+      "why": "A published source map hands anyone the original sources, including comments, internal endpoint names and any key that was inlined at build time. Browsers fetch them automatically when devtools is open.",
+      "action": "Disable source map emission for the production build, or upload maps to your error tracker as a private artifact instead of serving them.",
+      "verify": {
+        "cmd": "find . -maxdepth 4 -name '*.js.map' -not -path './node_modules/*' 2>/dev/null | head -5",
+        "expect": "No map files under a directory that gets deployed. Maps under a private build artifact are fine."
+      },
+      "references": [
+        "https://developer.mozilla.org/en-US/docs/Tools/Debugger/How_to/Use_a_source_map"
+      ],
+      "added": "2026-08-21"
+    }
+  ]
+}

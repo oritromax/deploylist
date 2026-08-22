@@ -1,0 +1,143 @@
+{
+  "$schema": "../../schema/layer.schema.json",
+  "schema_version": 1,
+  "id": "php.symfony",
+  "kind": "framework",
+  "name": "Symfony",
+  "extends": [
+    "universal",
+    "php"
+  ],
+  "suppressions": [
+    {
+      "id": "universal.gitignore-env",
+      "reason": "The Symfony skeleton .gitignore already excludes .env.local files. Replaced by the framework-specific check below, which also covers .env.prod.local."
+    }
+  ],
+  "checks": [
+    {
+      "id": "php.symfony.app-debug-off",
+      "title": "APP_DEBUG is 0 and APP_ENV is prod in production",
+      "category": "security",
+      "severity": "critical",
+      "why": "Debug mode serves full stack traces, environment variables and the web profiler to any visitor, which hands an attacker your configuration.",
+      "action": "Set APP_ENV=prod and APP_DEBUG=0 in the production environment, either in the host's environment variables or in .env.prod.local.",
+      "verify": {
+        "cmd": "grep -hE '^APP_(ENV|DEBUG)=' .env .env.local .env.prod.local 2>/dev/null",
+        "expect": "APP_ENV resolves to prod and APP_DEBUG to 0. If nothing prints, confirm both are set in the host's environment instead."
+      },
+      "references": [
+        "https://symfony.com/doc/current/configuration.html"
+      ],
+      "added": "2026-08-21"
+    },
+    {
+      "id": "php.symfony.env-local-ignored",
+      "title": "No .env.local or .env.prod.local file is tracked in git",
+      "category": "secrets",
+      "severity": "critical",
+      "why": "Those files hold the real database credentials and APP_SECRET. Once committed they stay in history even after deletion, and must be rotated rather than removed.",
+      "action": "Remove any tracked environment file from the index, confirm it is ignored, then rotate every credential that was ever committed.",
+      "verify": {
+        "cmd": "git ls-files --error-unmatch .env.local .env.prod.local .env.dev.local 2>&1 | head -5",
+        "expect": "Every path reports that it did not match any file. Any path listed back means it is tracked."
+      },
+      "references": [
+        "https://symfony.com/doc/current/configuration.html"
+      ],
+      "added": "2026-08-21"
+    },
+    {
+      "id": "php.symfony.no-dev-bundles-in-prod",
+      "title": "Dev-only bundles are not enabled in the prod environment",
+      "category": "security",
+      "severity": "high",
+      "why": "The profiler, debug and maker bundles expose routes and internals that should never be reachable in production.",
+      "action": "Open config/bundles.php and confirm the profiler, debug and maker bundles are scoped to the dev and test environments only.",
+      "verify": {
+        "cmd": "grep -nE 'WebProfiler|DebugBundle|MakerBundle' config/bundles.php",
+        "expect": "Each matching line is scoped to dev or test, and none is scoped to all or to prod."
+      },
+      "references": [
+        "https://symfony.com/doc/current/bundles.html"
+      ],
+      "added": "2026-08-21"
+    },
+    {
+      "id": "php.symfony.trusted-hosts-configured",
+      "title": "Trusted hosts and trusted proxies are configured",
+      "category": "security",
+      "severity": "high",
+      "why": "Without a trusted host list, a forged Host header can poison generated URLs and password reset links. Behind a load balancer, unset trusted proxies means every client appears to come from the balancer.",
+      "action": "Set framework.trusted_hosts to the domains you serve, and framework.trusted_proxies to the addresses of your load balancer or CDN.",
+      "verify": {
+        "suggest": "php bin/console debug:config framework",
+        "expect": "trusted_hosts lists the domains you actually serve, and trusted_proxies is set when the application sits behind a proxy."
+      },
+      "references": [
+        "https://symfony.com/doc/current/deployment/proxies.html"
+      ],
+      "added": "2026-08-21"
+    },
+    {
+      "id": "php.symfony.composer-no-dev",
+      "title": "Production dependencies are installed without dev packages",
+      "category": "build",
+      "severity": "high",
+      "why": "Dev dependencies ship test fixtures, debug tooling and extra code paths to production, enlarging both the attack surface and the deploy artifact.",
+      "action": "Install with the no-dev and optimize-autoloader flags in the production build step.",
+      "verify": {
+        "cmd": "composer show --installed --no-dev 2>&1 | head -3",
+        "expect": "The command succeeds and no dev-only package appears in the production install."
+      },
+      "references": [
+        "https://symfony.com/doc/current/deployment.html"
+      ],
+      "added": "2026-08-21"
+    },
+    {
+      "id": "php.symfony.prod-cache-warmed",
+      "title": "The production cache is warmed during deploy, not on first request",
+      "category": "performance",
+      "severity": "recommended",
+      "why": "Without a warmed cache the first visitors after each deploy pay the full container and routing compilation cost, and a cold cache under load can stall the whole site.",
+      "action": "Run the cache clear and cache warmup console commands as part of the deploy, before traffic is switched over.",
+      "verify": {
+        "cmd": "ls var/cache/prod 2>/dev/null | head -5",
+        "expect": "The prod cache directory exists and contains compiled container files."
+      },
+      "references": [
+        "https://symfony.com/doc/current/deployment.html"
+      ],
+      "added": "2026-08-21"
+    },
+    {
+      "id": "php.symfony.error-pages-customised",
+      "title": "Production error pages are branded rather than the framework default",
+      "category": "reliability",
+      "severity": "recommended",
+      "why": "The default error page tells a visitor which framework you run and reads as a broken site rather than a handled failure.",
+      "action": "Override the error templates under templates/bundles/TwigBundle/Exception so that 404 and 500 responses match the site's design.",
+      "verify": {
+        "manual": "Request a URL that does not exist on the deployed site, then confirm the response is your own styled page and carries a 404 status."
+      },
+      "references": [
+        "https://symfony.com/doc/current/controller/error_pages.html"
+      ],
+      "added": "2026-08-21"
+    },
+    {
+      "id": "php.symfony.messenger-for-slow-work",
+      "title": "Slow work is moved off the request into Messenger",
+      "category": "performance",
+      "severity": "optional",
+      "subjective": true,
+      "why": "Sending mail, generating files or calling third-party APIs inside a request ties response time to systems you do not control, though whether it is worth the queue infrastructure depends on your traffic.",
+      "action": "Consider dispatching slow operations to a Messenger transport with a worker, rather than running them inline in the controller.",
+      "references": [
+        "https://symfony.com/doc/current/messenger.html"
+      ],
+      "added": "2026-08-21"
+    }
+  ]
+}

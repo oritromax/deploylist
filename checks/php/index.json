@@ -1,0 +1,60 @@
+{
+  "$schema": "../../schema/layer.schema.json",
+  "schema_version": 1,
+  "id": "php",
+  "kind": "language",
+  "name": "PHP",
+  "extends": [
+    "universal"
+  ],
+  "checks": [
+    {
+      "id": "php.display-errors-off",
+      "title": "display_errors is off in production",
+      "category": "security",
+      "severity": "critical",
+      "why": "With display_errors on, a fatal error prints file paths, query fragments and sometimes credentials straight into the response body.",
+      "action": "Set display_errors to Off and log_errors to On in the production php.ini, and confirm no code overrides it at runtime.",
+      "verify": {
+        "cmd": "php -i 2>/dev/null | grep -E '^(display_errors|log_errors)'",
+        "expect": "display_errors is Off and log_errors is On."
+      },
+      "references": [
+        "https://www.php.net/manual/en/errorfunc.configuration.php"
+      ],
+      "added": "2026-08-21"
+    },
+    {
+      "id": "php.opcache-enabled",
+      "title": "OPcache is enabled in production",
+      "category": "performance",
+      "severity": "high",
+      "why": "Without OPcache every request recompiles every PHP file it touches, which typically costs several times the actual work of the request.",
+      "action": "Enable opcache in the production php.ini and set opcache.validate_timestamps to 0 so it does not stat files on every request.",
+      "verify": {
+        "cmd": "php -m 2>/dev/null | grep -i 'zend opcache'",
+        "expect": "The Zend OPcache module is listed."
+      },
+      "references": [
+        "https://www.php.net/manual/en/book.opcache.php"
+      ],
+      "added": "2026-08-21"
+    },
+    {
+      "id": "php.composer-lock-committed",
+      "title": "composer.lock is committed",
+      "category": "build",
+      "severity": "recommended",
+      "why": "Without the lock file, production resolves dependency versions independently of what was tested, so a deploy can pick up a release nobody has run.",
+      "action": "Commit composer.lock and install from it in production rather than resolving fresh.",
+      "verify": {
+        "cmd": "git ls-files --error-unmatch composer.lock 2>&1 | head -2",
+        "expect": "The path is echoed back, meaning it is tracked."
+      },
+      "references": [
+        "https://www.php.net/manual/en/index.php"
+      ],
+      "added": "2026-08-21"
+    }
+  ]
+}

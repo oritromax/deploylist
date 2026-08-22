@@ -1,0 +1,173 @@
+{
+  "$schema": "../../schema/layer.schema.json",
+  "schema_version": 1,
+  "id": "javascript.nextjs",
+  "kind": "framework",
+  "name": "Next.js",
+  "extends": [
+    "universal",
+    "javascript"
+  ],
+  "suppressions": [
+    {
+      "id": "universal.security-headers",
+      "reason": "Replaced by the framework-specific check below, which verifies the headers config in next.config rather than asking the operator to inspect responses by hand."
+    }
+  ],
+  "checks": [
+    {
+      "id": "javascript.nextjs.no-secrets-in-public-env",
+      "title": "No secret is exposed through a NEXT_PUBLIC variable",
+      "category": "secrets",
+      "severity": "critical",
+      "why": "Any variable prefixed NEXT_PUBLIC is inlined into the client bundle at build time and is readable by every visitor. This is the single most common way a Next.js project leaks an API key.",
+      "action": "Move anything secret to an unprefixed variable read only in server components, route handlers or server actions, then rotate every key that was ever built into a client bundle.",
+      "verify": {
+        "cmd": "grep -h 'NEXT_PUBLIC' .env .env.local .env.production .env.production.local 2>/dev/null | head -10",
+        "expect": "Every listed variable is genuinely safe to publish. Anything resembling a key, token, secret or password must be moved and rotated."
+      },
+      "references": [
+        "https://nextjs.org/docs/app/building-your-application/configuring/environment-variables"
+      ],
+      "added": "2026-08-21"
+    },
+    {
+      "id": "javascript.nextjs.security-headers-configured",
+      "title": "Security response headers are configured",
+      "category": "security",
+      "severity": "high",
+      "why": "Next.js sends almost no security headers by default. Without them the app has no clickjacking defence, no MIME sniffing protection and no referrer policy, all of which are one config block away.",
+      "action": "Add a headers entry to next.config covering Content-Security-Policy, X-Content-Type-Options, Referrer-Policy and Strict-Transport-Security, or set the equivalent at your CDN.",
+      "verify": {
+        "cmd": "grep -n 'headers' next.config.js next.config.mjs next.config.ts 2>/dev/null | head -5",
+        "expect": "A headers function is declared, or the same headers are set at the CDN or reverse proxy in front of the app."
+      },
+      "references": [
+        "https://nextjs.org/docs/app/api-reference/config/next-config-js/headers"
+      ],
+      "added": "2026-08-21"
+    },
+    {
+      "id": "javascript.nextjs.production-build-script",
+      "title": "The deploy runs a production build rather than the dev server",
+      "category": "build",
+      "severity": "critical",
+      "why": "The dev server recompiles on every request, disables output optimisation, and serves detailed error overlays with source frames to anyone who triggers an exception.",
+      "action": "Make the deploy run the build script and then the start script. Confirm no process manager or container entrypoint is invoking the dev script in production.",
+      "verify": {
+        "cmd": "grep -nE '\"(build|start|dev)\"' package.json | head -5",
+        "expect": "Separate build and start scripts exist, and the production entrypoint uses start rather than dev."
+      },
+      "references": [
+        "https://nextjs.org/docs/app/getting-started/deploying"
+      ],
+      "added": "2026-08-21"
+    },
+    {
+      "id": "javascript.nextjs.error-and-not-found-pages",
+      "title": "Custom error and not-found pages exist",
+      "category": "reliability",
+      "severity": "recommended",
+      "why": "The default pages announce the framework and read as a broken site rather than a handled failure. A missing error boundary also means one failing component can blank an entire route.",
+      "action": "Add error and not-found files at the app root, and an error boundary inside any route that fetches data it does not control.",
+      "verify": {
+        "cmd": "ls app/error.tsx app/error.js app/not-found.tsx app/not-found.js pages/404.tsx pages/_error.tsx 2>/dev/null | head -5",
+        "expect": "At least an error file and a not-found file exist for the router you use."
+      },
+      "references": [
+        "https://nextjs.org/docs/app/api-reference/file-conventions/error"
+      ],
+      "added": "2026-08-21"
+    },
+    {
+      "id": "javascript.nextjs.metadata-configured",
+      "title": "Pages export metadata for titles and social previews",
+      "category": "seo",
+      "severity": "recommended",
+      "why": "Without metadata every page shares one title and shares as a bare URL with no description or image, which measurably reduces click-through from search and from chat apps.",
+      "action": "Export a metadata object or generateMetadata from each route, covering title, description and openGraph, and set metadataBase so relative image URLs resolve.",
+      "verify": {
+        "cmd": "grep -rl 'export const metadata' app src/app 2>/dev/null | head -5 ; grep -rl 'generateMetadata' app src/app 2>/dev/null | head -5",
+        "expect": "Routes meant to be shared export metadata, either statically or through generateMetadata."
+      },
+      "references": [
+        "https://nextjs.org/docs/app/api-reference/functions/generate-metadata"
+      ],
+      "added": "2026-08-21"
+    },
+    {
+      "id": "javascript.nextjs.image-component-used",
+      "title": "Images go through the Next.js image component",
+      "category": "performance",
+      "severity": "recommended",
+      "why": "Plain img tags ship the original file at full size to every device, which is usually the largest single contributor to a poor Largest Contentful Paint on image-heavy pages.",
+      "action": "Replace img tags with the next/image component for content images, and configure remotePatterns for any external host you load from.",
+      "verify": {
+        "cmd": "grep -rl 'next/image' app src pages components 2>/dev/null | head -5",
+        "expect": "The image component is used for content images. Small inline icons and SVG sprites are reasonable exceptions."
+      },
+      "references": [
+        "https://nextjs.org/docs/app/api-reference/components/image"
+      ],
+      "added": "2026-08-21"
+    },
+    {
+      "id": "javascript.nextjs.react-strict-mode",
+      "title": "React strict mode is enabled",
+      "category": "config",
+      "severity": "recommended",
+      "why": "Strict mode surfaces unsafe lifecycles, impure renders and effect cleanup bugs during development. Disabling it hides exactly the class of bug that shows up under concurrent rendering in production.",
+      "action": "Leave reactStrictMode at its default of true in next.config, and fix what it reports rather than switching it off.",
+      "verify": {
+        "cmd": "grep -n 'reactStrictMode' next.config.js next.config.mjs next.config.ts 2>/dev/null | head -3",
+        "expect": "Either nothing is printed, which means the default of true applies, or it is explicitly set to true."
+      },
+      "references": [
+        "https://nextjs.org/docs/app/api-reference/config/next-config-js/reactStrictMode"
+      ],
+      "added": "2026-08-21"
+    },
+    {
+      "id": "javascript.nextjs.version-supported",
+      "title": "The Next.js version still receives security fixes",
+      "category": "security",
+      "severity": "high",
+      "why": "Next.js has shipped fixes for authorisation bypass and cache poisoning issues in middleware and the image optimiser. Older majors stop receiving those fixes while remaining perfectly runnable.",
+      "action": "Check which Next.js and React versions the project resolves to, and plan an upgrade if the major no longer receives security releases.",
+      "verify": {
+        "suggest": "next info",
+        "expect": "The reported Next.js version is on a major that still receives security releases, and React matches what that major expects."
+      },
+      "references": [
+        "https://nextjs.org/docs/app/guides/upgrading"
+      ],
+      "added": "2026-08-21"
+    },
+    {
+      "id": "javascript.nextjs.caching-behaviour-reviewed",
+      "title": "Caching and revalidation behaviour has been reviewed per route",
+      "category": "performance",
+      "severity": "optional",
+      "subjective": true,
+      "why": "Next.js caches aggressively by default, which is usually right but occasionally serves one user's data to another when a route reads request state in a way the framework cannot see.",
+      "action": "Consider walking each route that reads cookies, headers or session state and confirming its caching and revalidation settings match what that data actually allows.",
+      "references": [
+        "https://nextjs.org/docs/app/guides/caching"
+      ],
+      "added": "2026-08-21"
+    },
+    {
+      "id": "javascript.nextjs.standalone-output",
+      "title": "Container deploys use standalone output",
+      "category": "build",
+      "severity": "optional",
+      "subjective": true,
+      "why": "Standalone output traces only the files the server actually needs, which usually cuts a container image substantially. It is not worth the change if you deploy to a platform that handles this for you.",
+      "action": "If you build your own container image, consider setting output to standalone in next.config and copying only the traced server output into the runtime stage.",
+      "references": [
+        "https://nextjs.org/docs/app/api-reference/config/next-config-js/output"
+      ],
+      "added": "2026-08-21"
+    }
+  ]
+}

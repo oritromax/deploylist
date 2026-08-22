@@ -1,0 +1,131 @@
+{
+  "$schema": "../schema/layer.schema.json",
+  "schema_version": 1,
+  "id": "universal",
+  "kind": "universal",
+  "name": "Any web project",
+  "checks": [
+    {
+      "id": "universal.gitignore-env",
+      "title": "No environment file is tracked in git",
+      "category": "secrets",
+      "severity": "critical",
+      "why": "Environment files hold database credentials and API keys. Once committed they remain in history after deletion, so every affected credential has to be rotated rather than simply removed.",
+      "action": "Remove any tracked environment file from the index, add it to .gitignore, then rotate every credential that was ever committed.",
+      "verify": {
+        "cmd": "git ls-files --error-unmatch .env .env.local .env.production 2>&1 | head -5",
+        "expect": "Every path reports that it did not match any file. A path echoed back is tracked and must be dealt with."
+      },
+      "references": [
+        "https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html"
+      ],
+      "added": "2026-08-21"
+    },
+    {
+      "id": "universal.https-redirect",
+      "title": "Plain HTTP requests redirect to HTTPS",
+      "category": "security",
+      "severity": "high",
+      "why": "Without a redirect, a visitor who types the bare domain sends the whole session over plaintext, including any cookie set without the Secure flag.",
+      "action": "Configure the web server or CDN to answer HTTP with a permanent redirect to the HTTPS URL, and enable HSTS once you are confident.",
+      "verify": {
+        "manual": "Open the site over plain HTTP in a private window and confirm the browser lands on the HTTPS URL before any content renders."
+      },
+      "references": [
+        "https://cheatsheetseries.owasp.org/cheatsheets/Transport_Layer_Protection_Cheat_Sheet.html"
+      ],
+      "added": "2026-08-21"
+    },
+    {
+      "id": "universal.favicon-present",
+      "title": "A favicon is served",
+      "category": "seo",
+      "severity": "recommended",
+      "why": "Browsers request a favicon on every page load. When it is missing the site logs a 404 on each visit and shows a blank tab icon in bookmarks and history.",
+      "action": "Add a favicon at the site root, and reference the sizes you need from the document head.",
+      "verify": {
+        "cmd": "ls favicon.ico favicon.svg public/favicon.ico static/favicon.ico 2>/dev/null | head -5",
+        "expect": "At least one favicon file is listed."
+      },
+      "references": [
+        "https://developer.mozilla.org/en-US/docs/Glossary/Favicon"
+      ],
+      "added": "2026-08-21"
+    },
+    {
+      "id": "universal.open-graph-tags",
+      "title": "Open Graph tags are present on shareable pages",
+      "category": "seo",
+      "severity": "recommended",
+      "why": "Without them a shared link renders as a bare URL with no title, description or image, which measurably reduces click-through from chat and social apps.",
+      "action": "Add og:title, og:description, og:image and og:url to the document head of every page meant to be shared.",
+      "verify": {
+        "cmd": "grep -rl 'og:title' --include=*.html --include=*.twig --include=*.tsx . 2>/dev/null | head -5",
+        "expect": "At least one template declares Open Graph tags."
+      },
+      "references": [
+        "https://developer.mozilla.org/en-US/docs/Web/HTML/Element/meta"
+      ],
+      "added": "2026-08-21"
+    },
+    {
+      "id": "universal.security-headers",
+      "title": "Security response headers are served",
+      "category": "security",
+      "severity": "high",
+      "why": "Without them a browser has no instruction to block framing, to stop guessing content types, or to withhold the referring URL, so three whole classes of attack stay available for the sake of a few response headers.",
+      "action": "Serve Content-Security-Policy, X-Content-Type-Options, Referrer-Policy and Strict-Transport-Security from the application, the web server or the CDN, whichever sits closest to the user.",
+      "verify": {
+        "manual": "Load the deployed site and inspect the response headers on the main document, then confirm each of the four is present with a value you chose deliberately."
+      },
+      "references": [
+        "https://cheatsheetseries.owasp.org/cheatsheets/HTTP_Headers_Cheat_Sheet.html"
+      ],
+      "added": "2026-08-21"
+    },
+    {
+      "id": "universal.robots-txt",
+      "title": "A robots file exists and does not block the whole site",
+      "category": "seo",
+      "severity": "recommended",
+      "why": "A robots file copied from a staging environment usually disallows everything, and it will keep the production site out of search results silently for as long as nobody thinks to look at it.",
+      "action": "Publish a robots file that allows the pages you want indexed, disallows the ones you do not, and points at your sitemap.",
+      "verify": {
+        "cmd": "cat robots.txt public/robots.txt static/robots.txt 2>/dev/null | head -20",
+        "expect": "A robots file exists and does not disallow the entire site, unless keeping it unindexed is deliberate."
+      },
+      "references": [
+        "https://developer.mozilla.org/en-US/docs/Glossary/Robots.txt"
+      ],
+      "added": "2026-08-21"
+    },
+    {
+      "id": "universal.backup-restore-tested",
+      "title": "A backup has been restored at least once",
+      "category": "reliability",
+      "severity": "high",
+      "why": "An untested backup is a belief, not a capability. Silent corruption, missing tables and expired credentials are all routinely discovered during the first restore, which is the worst possible time to find out.",
+      "action": "Restore the most recent backup into a scratch environment, confirm the data is complete and current, and write down how long the restore took.",
+      "verify": {
+        "manual": "Confirm that someone has restored a production backup into a separate environment recently, and that the restore procedure is written down somewhere findable."
+      },
+      "references": [
+        "https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html"
+      ],
+      "added": "2026-08-21"
+    },
+    {
+      "id": "universal.license-declared",
+      "title": "The project declares a license",
+      "category": "legal",
+      "severity": "recommended",
+      "why": "Code with no license is not open source and not safe for anyone else to use, and for a closed project the absence leaves contributors with no written statement of who owns what they wrote.",
+      "action": "Add a license file at the repository root, and reference it from the package metadata so tooling can read it.",
+      "verify": {
+        "cmd": "ls LICENSE LICENSE.md LICENSE.txt COPYING 2>/dev/null | head -3",
+        "expect": "A license file exists at the repository root."
+      },
+      "added": "2026-08-21"
+    }
+  ]
+}
