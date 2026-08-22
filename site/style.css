@@ -48,6 +48,7 @@
   --py:   #2b6cb0;  --py-bg:   #e9f2fb;
   --go:   #0e7c86;  --go-bg:   #e4f4f5;
   --rust: #a8431f;  --rust-bg: #fbeee8;
+  --tf:   #7b42bc;  --tf-bg:   #f2ebfa;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -56,6 +57,7 @@
     --py:   #7ab3ea;  --py-bg:   #131f2c;
     --go:   #4dc8d3;  --go-bg:   #0f2427;
     --rust: #e08a63;  --rust-bg: #2a1a13;
+    --tf:   #b98ce8;  --tf-bg:   #211836;
   }
 }
 
@@ -269,6 +271,7 @@ section p:last-child { margin-bottom: 0; }
 .stack.py   { --tint: var(--py);   --tint-bg: var(--py-bg); }
 .stack.go   { --tint: var(--go);   --tint-bg: var(--go-bg); }
 .stack.rust { --tint: var(--rust); --tint-bg: var(--rust-bg); }
+.stack.tf   { --tint: var(--tf);   --tint-bg: var(--tf-bg); }
 
 .mark { width: 2.5rem; height: 2.5rem; flex: none; }
 .mark rect { fill: var(--tint-bg); }
