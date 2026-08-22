@@ -127,4 +127,28 @@ export function renderLlmsTxt(site, stacks) {
   return lines.join('\n');
 }
 
+/**
+ * Every published page a search engine should know about: the landing page,
+ * the catalog entry points, and one entry per stack.
+ */
+export function renderSitemap(site, catalog, generated) {
+  const urls = [`${site}/`, `${site}/llms.txt`];
+  for (const stack of catalog) urls.push(`${site}/${stack.stem}.md`);
+
+  const entries = urls.map((loc) => [
+    '  <url>',
+    `    <loc>${loc}</loc>`,
+    `    <lastmod>${generated}</lastmod>`,
+    '  </url>',
+  ].join('\n'));
+
+  return [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+    ...entries,
+    '</urlset>',
+    '',
+  ].join('\n');
+}
+
 export { SEVERITIES };

@@ -14,6 +14,7 @@
   --rule-firm:  #d3d3cb;
   --accent:     #1f6f4a;
   --accent-ink: #ffffff;
+  --wash:       #f2f7f4;
   --warn-edge:  #d9c9a3;
   --warn-bg:    #fbf6e9;
 
@@ -33,8 +34,28 @@
     --rule-firm:  #3a3a41;
     --accent:     #5fbf8f;
     --accent-ink: #0d0d0f;
+    --wash:       #14201a;
     --warn-edge:  #4a422c;
     --warn-bg:    #201d15;
+  }
+}
+
+/* One accent per ecosystem, so the coverage grid reads as a spectrum rather
+   than a column of grey boxes. Adding a stack means adding a pair here. */
+:root {
+  --js:   #b58900;  --js-bg:   #fdf6e0;
+  --php:  #5b57a6;  --php-bg:  #eeedfa;
+  --py:   #2b6cb0;  --py-bg:   #e9f2fb;
+  --go:   #0e7c86;  --go-bg:   #e4f4f5;
+  --rust: #a8431f;  --rust-bg: #fbeee8;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --js:   #e3b341;  --js-bg:   #2a2410;
+    --php:  #a29cf0;  --php-bg:  #1e1c33;
+    --py:   #7ab3ea;  --py-bg:   #131f2c;
+    --go:   #4dc8d3;  --go-bg:   #0f2427;
+    --rust: #e08a63;  --rust-bg: #2a1a13;
   }
 }
 
@@ -98,6 +119,10 @@ code, kbd, pre {
 /* ---- hero -------------------------------------------------------------- */
 
 .hero { padding-block: 4.5rem 3rem; }
+.hero-band {
+  background: linear-gradient(180deg, var(--wash), var(--page));
+  border-bottom: 1px solid var(--rule);
+}
 .hero h1 {
   margin: 0 0 1rem;
   font-size: clamp(2rem, 5.5vw, 3.1rem);
@@ -124,20 +149,50 @@ code, kbd, pre {
   text-transform: uppercase;
   color: var(--ink-faint);
 }
+.give-agent .row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+}
+.give-agent .row p { margin: 0; min-width: 0; }
 .give-agent .url {
-  margin: 0;
-  padding: 1rem;
   font-size: clamp(0.95rem, 2.6vw, 1.15rem);
   overflow-x: auto;
   white-space: nowrap;
+  /* One click selects the whole thing, for anyone without JavaScript. */
+  user-select: all;
+  -webkit-user-select: all;
 }
 .give-agent .url a { text-decoration: none; }
 .give-agent .aside {
-  margin: 0;
-  padding: 0.75rem 1rem 0.9rem;
   border-top: 1px dashed var(--rule);
   color: var(--ink-soft);
   font-size: 0.9rem;
+  align-items: flex-start;
+}
+.give-agent .aside em { user-select: all; -webkit-user-select: all; font-style: normal; }
+
+.copy {
+  margin-left: auto;
+  flex: none;
+  border: 1px solid var(--rule-firm);
+  border-radius: 7px;
+  background: var(--sunk);
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 550;
+  padding: 0.3rem 0.75rem;
+  cursor: pointer;
+  min-width: 5.5rem;
+}
+.copy:hover { border-color: var(--accent); color: var(--ink); }
+.copy:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.copy.done {
+  border-color: var(--accent);
+  background: var(--wash);
+  color: var(--accent);
 }
 
 /* ---- sections ---------------------------------------------------------- */
@@ -164,6 +219,15 @@ section p:last-child { margin-bottom: 0; }
 
 .steps { display: grid; gap: 1.25rem; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); margin: 0; padding: 0; list-style: none; }
 .steps li { border-top: 2px solid var(--accent); padding-top: 0.75rem; }
+.steps b::before {
+  content: "";
+  display: inline-block;
+  width: 0.4rem; height: 0.4rem;
+  margin-right: 0.45rem;
+  border-radius: 50%;
+  background: var(--accent);
+  vertical-align: 0.15em;
+}
 .steps b { display: block; font-weight: 620; }
 .steps span { color: var(--ink-soft); font-size: 0.95rem; }
 
@@ -181,24 +245,75 @@ section p:last-child { margin-bottom: 0; }
 
 /* ---- coverage ---------------------------------------------------------- */
 
-.stacks { display: grid; gap: 0.75rem; grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr)); margin: 0 0 1.25rem; padding: 0; list-style: none; }
+.stacks {
+  display: grid;
+  gap: 0.9rem;
+  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+  margin: 0 0 1.5rem;
+  padding: 0;
+  list-style: none;
+}
+
 .stack {
+  display: flex;
+  gap: 0.85rem;
+  align-items: flex-start;
   border: 1px solid var(--rule);
-  border-radius: 8px;
-  padding: 0.8rem 0.9rem;
+  border-top: 3px solid var(--tint, var(--rule-firm));
+  border-radius: 10px;
+  padding: 1rem;
   background: var(--raised);
 }
-.stack a { text-decoration: none; font-weight: 600; }
-.stack .kids { display: block; margin-top: 0.15rem; font-size: 0.88rem; color: var(--ink-soft); }
-.stack .kids a { font-weight: 400; text-decoration: underline; text-decoration-color: var(--rule-firm); }
+.stack.js   { --tint: var(--js);   --tint-bg: var(--js-bg); }
+.stack.php  { --tint: var(--php);  --tint-bg: var(--php-bg); }
+.stack.py   { --tint: var(--py);   --tint-bg: var(--py-bg); }
+.stack.go   { --tint: var(--go);   --tint-bg: var(--go-bg); }
+.stack.rust { --tint: var(--rust); --tint-bg: var(--rust-bg); }
+
+.mark { width: 2.5rem; height: 2.5rem; flex: none; }
+.mark rect { fill: var(--tint-bg); }
+.mark text {
+  fill: var(--tint);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  font-weight: 700;
+  text-anchor: middle;
+  letter-spacing: -0.02em;
+}
+
+.stack .body { min-width: 0; }
+.stack h3 { margin: 0 0 0.5rem; font-size: 1rem; font-weight: 640; line-height: 1.3; }
+.stack h3 a { text-decoration: none; }
+
+.pills { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0; padding: 0; list-style: none; }
+.pills a {
+  display: inline-block;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--tint-bg);
+  background: var(--tint-bg);
+  color: var(--tint);
+  font-size: 0.82rem;
+  font-weight: 550;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.pills a:hover { border-color: var(--tint); }
+.pills li:first-child a {
+  background: transparent;
+  color: var(--ink-soft);
+  border-color: var(--rule-firm);
+  font-weight: 450;
+}
 
 .planned { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0 0 1rem; padding: 0; list-style: none; }
 .planned li {
   border: 1px dashed var(--rule-firm);
   border-radius: 999px;
-  padding: 0.25rem 0.8rem;
+  padding: 0.25rem 0.85rem;
   font-size: 0.9rem;
-  color: var(--ink-soft);
+  color: var(--ink-faint);
+  background: var(--sunk);
 }
 
 /* ---- warning ----------------------------------------------------------- */

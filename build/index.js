@@ -11,7 +11,7 @@ import { createHash } from 'node:crypto';
 import { loadLayers, lintLayer } from '../lint/index.js';
 import { lintStructure, resolve, sortChecks } from '../lint/compose.js';
 import { idToUrlStem } from '../lint/paths.js';
-import { renderMarkdown, renderJson, renderIndexJson, renderLlmsTxt, SEVERITIES } from './render.js';
+import { renderMarkdown, renderJson, renderIndexJson, renderLlmsTxt, renderSitemap, SEVERITIES } from './render.js';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const DIST = join(ROOT, 'dist');
@@ -30,9 +30,10 @@ const CATEGORIES = ['security', 'secrets', 'config', 'performance', 'seo',
 // Content-Security-Policy header it receives, and a resource has to satisfy
 // all of them. Two policies can only ever be more restrictive than one.
 //
-// `style-src 'self'` exists for the landing page, the only document here that
-// renders. Everything else stays denied, scripts included -- the site has no
-// JavaScript of its own and nothing should be able to add any.
+// `style-src 'self'` and `script-src 'self'` exist for the landing page, the
+// only document here that renders. Both are same-origin only: no inline code,
+// no third party, nothing from a CDN. The .json and .md files are not
+// documents and load nothing, so this costs them nothing.
 //
 // The rest are the four headers universal.security-headers asks every site for,
 // kept here rather than in the CDN dashboard so they are version-controlled,
@@ -44,7 +45,7 @@ const CATEGORIES = ['security', 'secrets', 'config', 'performance', 'seo',
 const HEADERS = `/*
   Access-Control-Allow-Origin: *
   Cache-Control: public, max-age=600
-  Content-Security-Policy: default-src 'none'; style-src 'self'; frame-ancestors 'none'; base-uri 'none'
+  Content-Security-Policy: default-src 'none'; style-src 'self'; script-src 'self'; img-src 'self'; frame-ancestors 'none'; base-uri 'none'
   Referrer-Policy: no-referrer
   Strict-Transport-Security: max-age=15552000; includeSubDomains
   X-Content-Type-Options: nosniff
@@ -55,7 +56,9 @@ const written = [];
 function emit(relPath, content) {
   const full = join(DIST, relPath);
   mkdirSync(dirname(full), { recursive: true });
-  const body = typeof content === 'string' ? content : `${JSON.stringify(content, null, 2)}\n`;
+  const body = typeof content === 'string' || Buffer.isBuffer(content)
+    ? content
+    : `${JSON.stringify(content, null, 2)}\n`;
   writeFileSync(full, body);
   written.push({ path: relPath, bytes: Buffer.byteLength(body), sha256: createHash('sha256').update(body).digest('hex') });
 }
@@ -152,8 +155,15 @@ function main() {
       console.error(`error site/${entry.name}: only files are copied; nested directories are not supported yet`);
       return 1;
     }
-    emit(entry.name, readFileSync(join(SITE_DIR, entry.name), 'utf8'));
+    // Images are read as bytes. Reading a PNG as utf8 and writing it back is
+    // lossy, and the corruption is invisible until someone shares a link.
+    const text = /\.(html|css|js|txt|json|svg|xml)$/.test(entry.name);
+    emit(entry.name, readFileSync(join(SITE_DIR, entry.name), text ? 'utf8' : null));
   }
+
+  // Generated, not hand-written: it is a list of what exists, and that is the
+  // one thing the build always knows and a person always forgets.
+  emit('sitemap.xml', renderSitemap(SITE, catalog, generated));
 
   emitConfig('_headers', HEADERS);
 
