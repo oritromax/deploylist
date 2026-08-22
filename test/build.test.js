@@ -69,6 +69,13 @@ test('_headers is emitted for the host but never advertised as fetchable', () =>
     'Referrer-Policy', 'Strict-Transport-Security']) {
     assert.ok(headers.includes(`${h}:`), `_headers is missing ${h}`);
   }
+
+  // Exactly one policy. A second one does not override the first; the browser
+  // enforces both, so the strictest wins and the extra rule is a silent no-op
+  // at best. This is what broke the landing page's stylesheet once already.
+  const policies = headers.match(/Content-Security-Policy:/g) ?? [];
+  assert.equal(policies.length, 1, 'a second CSP can only tighten, never loosen');
+  assert.match(headers, /style-src 'self'/);
   const manifest = JSON.parse(readFileSync(new URL('../dist/manifest.json', import.meta.url), 'utf8'));
   assert.ok(!('_headers' in manifest.files),
     'the host consumes _headers at deploy time and does not serve it, so hashing it would advertise a 404');
