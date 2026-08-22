@@ -4,7 +4,7 @@
 // The build refuses to run on input that does not lint. A published file is
 // only ever produced from content that passed every gate.
 
-import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdirSync, writeFileSync, rmSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
@@ -12,10 +12,10 @@ import { loadLayers, lintLayer } from '../lint/index.js';
 import { lintStructure, resolve, sortChecks } from '../lint/compose.js';
 import { idToUrlStem } from '../lint/paths.js';
 import { renderMarkdown, renderJson, renderIndexJson, renderLlmsTxt, SEVERITIES } from './render.js';
-import { renderIndexHtml, renderStylesheet } from './page.js';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const DIST = join(ROOT, 'dist');
+const SITE_DIR = join(ROOT, 'site');
 const SITE = 'https://deploy-list.com';
 const SCHEMA_VERSION = 1;
 
@@ -142,9 +142,18 @@ function main() {
   });
   emit('llms.txt', renderLlmsTxt(SITE, catalog.filter((c) => c.kind !== 'universal')));
 
-  // The page a person lands on. Everything on it comes from the catalog above.
-  emit('index.html', renderIndexHtml({ site: SITE, catalog, generated }));
-  emit('style.css', renderStylesheet());
+  // The page a person lands on is hand-authored HTML and CSS under site/, and
+  // the build copies it verbatim. Design belongs in a file you can open and
+  // edit, not in a template literal. What keeps it honest is a test, not a
+  // generator: the coverage test fails if a published stack is missing from
+  // the page.
+  for (const entry of readdirSync(SITE_DIR, { withFileTypes: true })) {
+    if (!entry.isFile()) {
+      console.error(`error site/${entry.name}: only files are copied; nested directories are not supported yet`);
+      return 1;
+    }
+    emit(entry.name, readFileSync(join(SITE_DIR, entry.name), 'utf8'));
+  }
 
   emitConfig('_headers', HEADERS);
 

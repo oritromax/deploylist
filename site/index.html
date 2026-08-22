@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>deploylist — a pre-deployment checklist your coding agent can read</title>
+<meta name="description" content="Checklists of what should be true before software ships, published at stable URLs for coding agents. It reports. It never changes your project.">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<header class="masthead">
+  <div class="wrap">
+    <a class="wordmark" href="/">deploylist</a>
+    <nav>
+      <a href="#use">How to use</a>
+      <a href="#covered">Covered</a>
+      <a href="#limits">Limits</a>
+      <a href="https://github.com/oritromax/deploylist">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+<div class="wrap hero">
+  <div class="column">
+    <h1>The checklist your agent reads before you ship.</h1>
+    <p class="lede">Everything that should be true before software goes to
+    production, one list per stack, published as plain files at fixed URLs.</p>
+  </div>
+
+  <div class="give-agent">
+    <div class="label">Give your agent this link</div>
+    <p class="url"><a href="/llms.txt">https://deploy-list.com/llms.txt</a></p>
+    <p class="aside">Or just say it: <em>check this project against
+    https://deploy-list.com/llms.txt</em></p>
+  </div>
+</div>
+
+<section id="use">
+  <div class="wrap">
+    <p class="eyebrow">How it works</p>
+    <ol class="steps">
+      <li><b>1. It reads the index</b>
+        <span>One link. Your agent finds the catalog and works out which stack
+        this project is built on.</span></li>
+      <li><b>2. It runs the checks</b>
+        <span>Read-only verification steps, checked against an allowlist before
+        they are ever published.</span></li>
+      <li><b>3. It hands you a report</b>
+        <span>Findings, with a severity on each. What to fix, and whether to fix
+        it, is yours to decide.</span></li>
+    </ol>
+  </div>
+</section>
+
+<section>
+  <div class="wrap column">
+    <h2>What it checks</h2>
+    <p>Secrets that should not be in git. Debug flags left on. Caching, build
+    and toolchain settings. Meta tags, error pages, logging, accessibility.
+    Not only security, and not only the basics.</p>
+    <p>Every check carries a category and a severity, so you can take the whole
+    list or only the ship-blockers.</p>
+  </div>
+</section>
+
+<section id="limits">
+  <div class="wrap">
+    <p class="eyebrow">Limits, on purpose</p>
+    <ul class="cards">
+      <li class="card">
+        <h3>It never changes your project</h3>
+        <p>There is no apply mode and there will not be one. The agent's job
+        ends at a report handed to you.</p>
+      </li>
+      <li class="card">
+        <h3>Not even unattended</h3>
+        <p>Every published file tells the agent that running on autopilot is
+        not the approval it is missing. If something needs changing, it says so
+        and stops.</p>
+      </li>
+      <li class="card">
+        <h3>It does not run your toolchain</h3>
+        <p>Where only your framework's own CLI can answer a question,
+        deploylist suggests the command and leaves the decision to you.</p>
+      </li>
+      <li class="card">
+        <h3>It does not see your code</h3>
+        <p>These are static files. Your agent fetches them. Nothing about your
+        project is sent anywhere.</p>
+      </li>
+    </ul>
+  </div>
+</section>
+
+<section id="covered">
+  <div class="wrap">
+    <p class="eyebrow">Covered today</p>
+    <ul class="stacks">
+      <li class="stack">
+        <a href="/javascript.md">JavaScript and TypeScript</a>
+        <span class="kids"><a href="/javascript/nextjs.md">Next.js</a></span>
+      </li>
+      <li class="stack">
+        <a href="/php.md">PHP</a>
+        <span class="kids"><a href="/php/laravel.md">Laravel</a>, <a href="/php/symfony.md">Symfony</a></span>
+      </li>
+      <li class="stack">
+        <a href="/python.md">Python</a>
+        <span class="kids"><a href="/python/django.md">Django</a></span>
+      </li>
+      <li class="stack">
+        <a href="/go.md">Go</a>
+        <span class="kids">language layer</span>
+      </li>
+    </ul>
+
+    <div class="column">
+      <p>Every stack inherits <a href="/universal.md">the universal layer</a> —
+      the handful of things that are true of any software project. Checks that
+      follow from what a project <em>is</em> rather than what it is written in
+      live in their own layer: <a href="/web.md">anything served over HTTP</a>.
+      A command-line tool has no favicon and should not be told it needs one.</p>
+      <p>Each list is complete on its own, so a framework list already contains
+      its language and universal checks. The live catalog, with the current
+      count for every stack, is <a href="/index.json">index.json</a>.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="eyebrow">Wanted, not yet written</p>
+    <ul class="planned">
+      <li>Rust</li>
+      <li>Java</li>
+      <li>Zig</li>
+      <li>Flutter</li>
+    </ul>
+    <div class="column">
+      <p>Nobody knows every stack. If you know one of these well — or one that
+      is not listed — the <a href="https://github.com/oritromax/deploylist">repository</a>
+      takes contributions.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap column">
+    <div class="warning">
+      <h2>Before you act on a report</h2>
+      <p>Verify anything before you change it. A check can be wrong, out of
+      date, or wrong for your project specifically. You know your codebase,
+      your deadline and your risk. deploylist does not.</p>
+      <p>These lists are provided as-is, with no warranty. deploylist and its
+      authors are not responsible for anything that breaks in your project,
+      whether you acted on a finding or missed one.</p>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <ul class="links">
+      <li><a href="/llms.txt">llms.txt</a></li>
+      <li><a href="/index.json">catalog</a></li>
+      <li><a href="/manifest.json">manifest</a></li>
+      <li><a href="https://github.com/oritromax/deploylist">GitHub</a></li>
+      <li><a href="https://github.com/oritromax/deploylist/blob/main/LICENSE">MIT licensed</a></li>
+    </ul>
+    <p>Built by <a href="https://ioritro.com">Oritro Ahmed</a>. © 2026 Oritro Ahmed.</p>
+  </div>
+</footer>
+
+</body>
+</html>
