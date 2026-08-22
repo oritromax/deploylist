@@ -1,0 +1,92 @@
+{
+  "$schema": "../../schema/layer.schema.json",
+  "schema_version": 1,
+  "id": "shell",
+  "kind": "language",
+  "name": "Shell",
+  "extends": [
+    "universal"
+  ],
+  "checks": [
+    {
+      "id": "shell.exits-on-failure",
+      "title": "Scripts stop when a command fails",
+      "category": "reliability",
+      "severity": "high",
+      "why": "By default a script carries on after a command fails, so a deploy that could not fetch the artifact still restarts the service. The script's exit status is that of its last line, which is usually one that succeeded, so nothing reports a problem.",
+      "action": "Set the shell to exit on error, to fail on an unset variable, and to propagate a failure through a pipeline. Where a command is allowed to fail, say so at that line rather than by leaving the whole script permissive.",
+      "verify": {
+        "cmd": "grep -rLE 'set -[eux]*e|set -o errexit' --include='*.sh' . 2>/dev/null | head -10",
+        "expect": "Nothing listed. Each file printed is a script that keeps going after a failure."
+      },
+      "references": [
+        "https://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "shell.no-inline-credentials",
+      "title": "No credential is written into a script",
+      "category": "secrets",
+      "severity": "critical",
+      "why": "A password in a deploy script is committed, and it is also visible in the process list to every user on the machine while the command runs. Scripts are copied between projects far more casually than application code, and the credential travels with them.",
+      "action": "Read credentials from the environment or a secret store at run time, pass them by file or environment rather than on a command line, and rotate anything that was ever committed.",
+      "verify": {
+        "cmd": "grep -rnE '(PASSWORD|PASSWD|SECRET|TOKEN|API_?KEY)[A-Z_]*=[^$\\\"'\"'\"'[:space:]]' --include='*.sh' --include='*.bash' . 2>/dev/null | head -10",
+        "expect": "No literal value. Reading from the environment or a secret store is fine."
+      },
+      "references": [
+        "https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "shell.no-remote-script-piped-to-shell",
+      "title": "Nothing downloads a script and runs it unchecked",
+      "category": "security",
+      "severity": "high",
+      "why": "Piping a download straight into a shell runs whatever the server returns at that moment, with no signature, no pinned version and no chance to read it. A compromise of that host, or of anything between you and it, is a compromise of every machine that runs the line.",
+      "action": "Download to a file, pin a version, verify a checksum or signature, then run it. Where a vendor only offers the one-line form, vendor the script into your own repository and update it deliberately.",
+      "verify": {
+        "cmd": "grep -rnE '(curl|wget)[^|]*\\|[[:space:]]*(sudo[[:space:]]+)?(bash|sh|zsh)' --include='*.sh' --include=Dockerfile --include='*.yml' --include='*.yaml' . 2>/dev/null | head -10",
+        "expect": "Nothing. Each hit executes code fetched at run time without checking it."
+      },
+      "references": [
+        "https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "shell.destructive-paths-guarded",
+      "title": "Recursive deletes cannot expand to the wrong path",
+      "category": "reliability",
+      "severity": "critical",
+      "why": "A recursive delete built from a variable deletes the root of the filesystem when that variable is empty, and an unquoted path containing a space deletes something adjacent to the one intended. Both have taken production down, and both look correct in review.",
+      "action": "Quote every path, refuse to run when the variable is unset or empty, and prefer deleting a named directory over deleting the contents of one built by expansion.",
+      "verify": {
+        "cmd": "grep -rnE 'rm[[:space:]]+-[a-zA-Z]*[rR][a-zA-Z]*[[:space:]][^;|]*[$]' --include='*.sh' --include=Dockerfile --include='*.yml' . 2>/dev/null | grep -Fv ':?' | head -10",
+        "expect": "Review every hit. Each is a recursive delete whose target is decided at run time, and an empty variable makes the target the filesystem root."
+      },
+      "references": [
+        "https://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "shell.static-analysis-clean",
+      "title": "Scripts pass a shell linter",
+      "category": "reliability",
+      "severity": "recommended",
+      "why": "Quoting, word splitting and test syntax are where shell goes wrong quietly, and the resulting bug appears only when a filename has a space or a variable is empty. A linter finds these in a second and a reviewer usually does not.",
+      "action": "Run a shell linter over the scripts you deploy with, and fix or explicitly silence each finding rather than leaving the output to be scrolled past.",
+      "verify": {
+        "suggest": "shellcheck **/*.sh",
+        "expect": "No unaddressed finding. Anything intentional is silenced at the line with a reason."
+      },
+      "references": [
+        "https://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html"
+      ],
+      "added": "2026-08-22"
+    }
+  ]
+}
