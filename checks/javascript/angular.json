@@ -1,0 +1,110 @@
+{
+  "$schema": "../../schema/layer.schema.json",
+  "schema_version": 1,
+  "id": "javascript.angular",
+  "kind": "framework",
+  "name": "Angular",
+  "extends": [
+    "universal",
+    "javascript",
+    "web"
+  ],
+  "checks": [
+    {
+      "id": "javascript.angular.no-secrets-in-environment-files",
+      "title": "No credential is in an environment file",
+      "category": "secrets",
+      "severity": "critical",
+      "why": "Environment files are compiled into the bundle the browser downloads. A key placed there is not configuration, it is published, and the file name suggests otherwise to everyone who reads it.",
+      "action": "Keep anything secret on a server the browser talks to, and rotate any key that has ever been built into a bundle. A key that shipped is a key that leaked, whether or not anyone noticed.",
+      "verify": {
+        "cmd": "grep -rniE '(secret|password|token|api_?key|private_?key)[[:space:]]*:' src/environments 2>/dev/null | head -10",
+        "expect": "Nothing that is actually secret. A public identifier or an endpoint URL is fine."
+      },
+      "references": [
+        "https://angular.dev/tools/cli/environments"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "javascript.angular.production-configuration-used",
+      "title": "The deployed bundle was built with the production configuration",
+      "category": "build",
+      "severity": "high",
+      "why": "The development configuration disables optimisation and keeps debugging aids in the output. The application still works, which is why a build script that omits the configuration can survive for months.",
+      "action": "Name the production configuration explicitly on the build command in CI and in the image, rather than relying on whichever default the current CLI version applies.",
+      "verify": {
+        "cmd": "grep -rnE 'ng[\",[:space:]]+build|--configuration|npm run build' --include=Dockerfile --include='*.sh' --include='*.yml' --include='*.yaml' --include=package.json . 2>/dev/null | head -10",
+        "expect": "The deploy path builds with the production configuration."
+      },
+      "references": [
+        "https://angular.dev/tools/cli/build"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "javascript.angular.dev-server-not-serving-production",
+      "title": "The development server is not what serves the application",
+      "category": "reliability",
+      "severity": "high",
+      "why": "The development server rebuilds on file changes, serves unoptimised output and is not built to face the internet. Reaching for it in a container is easy because it is the command everyone already knows.",
+      "action": "Build once and serve the resulting static files from a web server or a CDN, and keep the development command out of images and deploy scripts.",
+      "verify": {
+        "cmd": "grep -rnE 'ng[\",[:space:]]+serve|ng[\",[:space:]]+dev' --include=Dockerfile --include='*.sh' --include='*.yml' --include='*.yaml' . 2>/dev/null | head -10",
+        "expect": "No hit on a production path. A development compose file is fine."
+      },
+      "references": [
+        "https://angular.dev/tools/cli/deployment"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "javascript.angular.source-maps-not-published",
+      "title": "Source maps are not served to the public",
+      "category": "security",
+      "severity": "recommended",
+      "why": "A published source map reconstructs the original source, including comments, internal names and any endpoint or logic you assumed was obscured by the build.",
+      "action": "Leave source maps off for the production configuration, or generate them and upload them to your error tracker instead of deploying them alongside the bundle.",
+      "verify": {
+        "cmd": "grep -rn -A3 'sourceMap' angular.json 2>/dev/null | head -20",
+        "expect": "Source maps are off in the production configuration, or generated and kept out of the deployed output."
+      },
+      "references": [
+        "https://angular.dev/reference/configs/workspace-config"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "javascript.angular.output-hashing-enabled",
+      "title": "Built file names change when their contents change",
+      "category": "reliability",
+      "severity": "high",
+      "why": "Without hashed file names a browser or CDN keeps serving yesterday's bundle against today's index, and the result is a half-updated application that fails in ways nobody can reproduce.",
+      "action": "Enable output hashing for the production configuration and let the index reference the hashed names, so a deploy invalidates itself.",
+      "verify": {
+        "cmd": "grep -rn -A2 'outputHashing' angular.json 2>/dev/null | head -10",
+        "expect": "Output hashing is on for production. Absent means the CLI default applies, which is worth confirming rather than assuming."
+      },
+      "references": [
+        "https://angular.dev/reference/configs/workspace-config"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "javascript.angular.bundle-budgets-set",
+      "title": "The build fails when the bundle grows past an agreed size",
+      "category": "performance",
+      "severity": "recommended",
+      "why": "Bundles grow one dependency at a time and nobody notices until the application is slow on a phone. A budget turns that into a build failure at the moment the dependency is added, when it is still cheap to reconsider.",
+      "action": "Set a budget for the initial bundle that reflects what your users' devices and networks can actually carry, and treat exceeding it as a decision rather than a warning.",
+      "verify": {
+        "cmd": "grep -rn -A6 'budgets' angular.json 2>/dev/null | head -20",
+        "expect": "A budget with an error threshold, not only a warning."
+      },
+      "references": [
+        "https://angular.dev/reference/configs/workspace-config"
+      ],
+      "added": "2026-08-22"
+    }
+  ]
+}
