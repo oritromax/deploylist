@@ -239,15 +239,36 @@ owner, separate from any content review in the same PR:
 ```
 /schema/**
 /lint/**
-/docs/security-model.md
-/SPEC.md
+/build/**
+/test/**
 /.github/**
 /CODEOWNERS
+/SPEC.md
+/CONTRIBUTING.md
+/docs/security-model.md
+/package.json
+/package-lock.json
+/wrangler.jsonc
 ```
 
 Without this, the natural attack is one PR that adds a payload and relaxes the
 rule that would have caught it. This is T6 and it is the most likely
 sophisticated attempt against a repository like this one.
+
+`main` is protected to match: a pull request is required, the `gate` workflow
+must pass, force pushes and branch deletion are blocked, and the rules apply to
+administrators with no bypass.
+
+**One part of this is not yet true, said plainly here rather than discovered
+later.** Code Owner review is switched off. The repository has a single
+maintainer, GitHub does not let anyone approve their own pull request, and
+enforcing the rule against administrators would therefore leave no way to merge
+anything — including the change that would relax it. So the mechanical half
+binds everyone: no direct pushes, no rewritten history, nothing merged that
+fails lint or the test suite. The human half does not. A change authored by the
+sole maintainer reaches `main` without a second pair of eyes on its content,
+and until that changes CODEOWNERS records who ought to review rather than
+compelling anyone to. It is switched on the day a second maintainer exists.
 
 ## 8. What this does not defend against
 

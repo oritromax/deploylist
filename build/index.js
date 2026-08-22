@@ -28,6 +28,9 @@ const CATEGORIES = ['security', 'secrets', 'config', 'performance', 'seo',
 // kept here rather than in the CDN dashboard so they are version-controlled,
 // reviewable in a diff, and covered by CODEOWNERS. The site serves no HTML and
 // executes nothing, so the policy can deny everything without breaking a thing.
+//
+// HSTS is served from here, so the CDN's own HSTS setting stays off. Two
+// sources for one header is how you end up with a duplicate nobody owns.
 const HEADERS = `/*
   Access-Control-Allow-Origin: *
   Cache-Control: public, max-age=600
