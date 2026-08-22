@@ -1,0 +1,65 @@
+# Whether a reference has rotted is a different question from whether a change
+# is sound, and it moves on a different clock, so it runs on its own schedule
+# instead of inside the pull request gate. A check that cannot fail teaches
+# people to scroll past it; this one can, and it files an issue when it does.
+name: links
+
+on:
+  schedule:
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+
+      - name: Verify every reference still resolves
+        shell: bash
+        run: |
+          set -o pipefail
+          node lint/index.js --check-links 2>&1 | tee link-report.txt
+
+      # Only reached when a reference actually returned an error status or went
+      # unreachable. A host that rate-limited us is a warning and does not land
+      # here.
+      - name: Report the rot
+        if: failure()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh label create broken-link --color B60205 \
+            --description "A published reference no longer resolves" 2>/dev/null || true
+
+          {
+            echo "The scheduled link check found references that no longer resolve."
+            echo
+            echo "Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            echo
+            echo '```'
+            grep -E '^(error|warn)' link-report.txt || cat link-report.txt
+            echo '```'
+            echo
+            echo "A dead reference is a content fix: replace the URL with the"
+            echo "current official page, or drop the reference if the guidance"
+            echo "moved. Rate-limit warnings need no action."
+          } > issue-body.md
+
+          open=$(gh issue list --label broken-link --state open --limit 1 --json number --jq '.[0].number // empty')
+          if [ -n "$open" ]; then
+            gh issue comment "$open" --body-file issue-body.md
+          else
+            gh issue create --title "Reference links no longer resolve" \
+              --label broken-link --body-file issue-body.md
+          fi
