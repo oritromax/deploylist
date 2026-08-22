@@ -12,6 +12,7 @@ import { loadLayers, lintLayer } from '../lint/index.js';
 import { lintStructure, resolve, sortChecks } from '../lint/compose.js';
 import { idToUrlStem } from '../lint/paths.js';
 import { renderMarkdown, renderJson, renderIndexJson, renderLlmsTxt, SEVERITIES } from './render.js';
+import { renderIndexHtml, renderStylesheet } from './page.js';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const DIST = join(ROOT, 'dist');
@@ -38,6 +39,14 @@ const HEADERS = `/*
   Referrer-Policy: no-referrer
   Strict-Transport-Security: max-age=15552000; includeSubDomains
   X-Content-Type-Options: nosniff
+
+# The landing page is the one document that renders, so it is the one path that
+# may load anything at all: its own stylesheet, same origin, and nothing else.
+# No scripts, here or anywhere.
+/
+  Content-Security-Policy: default-src 'none'; style-src 'self'; frame-ancestors 'none'; base-uri 'none'
+/index.html
+  Content-Security-Policy: default-src 'none'; style-src 'self'; frame-ancestors 'none'; base-uri 'none'
 `;
 
 const written = [];
@@ -131,6 +140,10 @@ function main() {
     stacks: catalog,
   });
   emit('llms.txt', renderLlmsTxt(SITE, catalog.filter((c) => c.kind !== 'universal')));
+
+  // The page a person lands on. Everything on it comes from the catalog above.
+  emit('index.html', renderIndexHtml({ site: SITE, catalog, generated }));
+  emit('style.css', renderStylesheet());
 
   emitConfig('_headers', HEADERS);
 
