@@ -58,6 +58,15 @@ test('slices are subsets of the full file', () => {
   assert.ok(critical.checks.every((c) => ids.has(c.id) && ['critical', 'high'].includes(c.severity)));
 });
 
+test('_headers is emitted for the host but never advertised as fetchable', () => {
+  run('build/index.js');
+  const headers = readFileSync(new URL('../dist/_headers', import.meta.url), 'utf8');
+  assert.match(headers, /Access-Control-Allow-Origin: \*/);
+  const manifest = JSON.parse(readFileSync(new URL('../dist/manifest.json', import.meta.url), 'utf8'));
+  assert.ok(!('_headers' in manifest.files),
+    'the host consumes _headers at deploy time and does not serve it, so hashing it would advertise a 404');
+});
+
 test('the manifest hashes every published file', () => {
   const manifest = JSON.parse(readFileSync(new URL('../dist/manifest.json', import.meta.url), 'utf8'));
   assert.equal(manifest.schema_version, 1);

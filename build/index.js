@@ -21,6 +21,14 @@ const SCHEMA_VERSION = 1;
 const CATEGORIES = ['security', 'secrets', 'config', 'performance', 'seo',
   'accessibility', 'observability', 'reliability', 'build', 'legal'];
 
+// Cloudflare Pages does not set CORS headers by default, and the whole product
+// is agents fetching these URLs, so a browser-context consumer needs this.
+const HEADERS = `/*
+  Access-Control-Allow-Origin: *
+  Cache-Control: public, max-age=600
+  X-Content-Type-Options: nosniff
+`;
+
 const written = [];
 
 function emit(relPath, content) {
@@ -29,6 +37,15 @@ function emit(relPath, content) {
   const body = typeof content === 'string' ? content : `${JSON.stringify(content, null, 2)}\n`;
   writeFileSync(full, body);
   written.push({ path: relPath, bytes: Buffer.byteLength(body), sha256: createHash('sha256').update(body).digest('hex') });
+}
+
+// Host configuration, consumed by the platform at deploy time and never served.
+// It stays out of `written`, and so out of the manifest, because the manifest
+// hashes files a consumer can fetch and this one 404s.
+function emitConfig(relPath, content) {
+  const full = join(DIST, relPath);
+  mkdirSync(dirname(full), { recursive: true });
+  writeFileSync(full, content);
 }
 
 function stripInternal(checks) {
@@ -103,6 +120,8 @@ function main() {
     stacks: catalog,
   });
   emit('llms.txt', renderLlmsTxt(SITE, catalog.filter((c) => c.kind !== 'universal')));
+
+  emitConfig('_headers', HEADERS);
 
   // Manifest last, and it does not hash itself.
   const manifest = {
