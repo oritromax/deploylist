@@ -1,0 +1,60 @@
+{
+  "$schema": "../../schema/layer.schema.json",
+  "schema_version": 1,
+  "id": "hcl",
+  "kind": "language",
+  "name": "HCL",
+  "extends": [
+    "universal"
+  ],
+  "checks": [
+    {
+      "id": "hcl.no-hardcoded-credentials",
+      "title": "No credential is written literally in a configuration file",
+      "category": "secrets",
+      "severity": "critical",
+      "why": "A key pasted into configuration is committed, mirrored to every fork and clone, and stays in history after it is deleted. Configuration files are read far more casually than application code.",
+      "action": "Move every credential to an environment variable or a secret store that the tool reads at run time, then rotate anything that was ever committed.",
+      "verify": {
+        "cmd": "grep -rnE '(secret|password|passwd|token|api_key|access_key|private_key)[a-z_]*[[:space:]]*=[[:space:]]*\"[^\"$]' --include='*.tf' --include='*.hcl' . 2>/dev/null | head -10",
+        "expect": "No line assigns a literal secret. A variable reference, a data source, or a name that only points at a secret is fine."
+      },
+      "references": [
+        "https://developer.hashicorp.com/terraform/language/values/variables"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "hcl.sensitive-variables-marked",
+      "title": "Variables holding secrets are marked sensitive",
+      "category": "secrets",
+      "severity": "high",
+      "why": "Without the marking the value is printed in plan output and in CI logs, where it is kept far longer than anyone intends and is visible to everyone who can read the build.",
+      "action": "Set sensitive on every variable and output that carries a credential. It suppresses the value in plan and apply output.",
+      "verify": {
+        "cmd": "grep -rnE -A4 'variable \"[^\"]*(secret|password|token|key)[^\"]*\"' --include='*.tf' . 2>/dev/null | head -40",
+        "expect": "Every declaration shown includes a sensitive line. One without it prints its value in plan output and in CI logs."
+      },
+      "references": [
+        "https://developer.hashicorp.com/terraform/language/values/variables"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "hcl.formatting-consistent",
+      "title": "Configuration is formatted with the tool's own formatter",
+      "category": "build",
+      "severity": "optional",
+      "why": "Unformatted configuration makes review diffs noisy, and a noisy diff is where a one-line change to a security group goes unnoticed.",
+      "action": "Run the formatter over the tree and keep it in CI so the question never reaches review.",
+      "verify": {
+        "suggest": "terraform fmt -check -recursive",
+        "expect": "The command lists no files. Anything listed is unformatted."
+      },
+      "references": [
+        "https://developer.hashicorp.com/terraform/cli/commands/fmt"
+      ],
+      "added": "2026-08-22"
+    }
+  ]
+}

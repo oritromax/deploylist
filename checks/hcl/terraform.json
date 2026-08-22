@@ -1,0 +1,140 @@
+{
+  "$schema": "../../schema/layer.schema.json",
+  "schema_version": 1,
+  "id": "hcl.terraform",
+  "kind": "framework",
+  "name": "Terraform",
+  "extends": [
+    "universal",
+    "hcl"
+  ],
+  "checks": [
+    {
+      "id": "hcl.terraform.state-not-committed",
+      "title": "State files are not tracked in git",
+      "category": "secrets",
+      "severity": "critical",
+      "why": "State holds every value the run produced in plain text, including database passwords and generated keys, whether or not the variable was marked sensitive. Committing it publishes them.",
+      "action": "Remove state from tracking, add it to gitignore, move to a remote backend, and rotate every credential the file ever held. Deleting the file does not remove it from history.",
+      "verify": {
+        "cmd": "git ls-files '*.tfstate' '*.tfstate.backup' '*.tfstate.*'",
+        "expect": "Nothing is listed. Any output is a credential leak, not a tidiness problem."
+      },
+      "references": [
+        "https://developer.hashicorp.com/terraform/language/state/sensitive-data"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "hcl.terraform.remote-backend-with-locking",
+      "title": "State lives in a remote backend that supports locking",
+      "category": "reliability",
+      "severity": "high",
+      "why": "With local state, only one machine can apply and the file is one laptop failure from gone. Without locking, two applies at once interleave and leave state describing infrastructure that does not exist.",
+      "action": "Configure a remote backend that locks, and confirm locking is actually enabled rather than assumed. Migrate existing state rather than starting fresh.",
+      "verify": {
+        "cmd": "grep -rn -A4 'backend \"' --include='*.tf' . 2>/dev/null | head -20",
+        "expect": "A backend block naming a remote backend. No backend block at all means local state."
+      },
+      "references": [
+        "https://developer.hashicorp.com/terraform/language/backend"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "hcl.terraform.lock-file-committed",
+      "title": "The dependency lock file is committed",
+      "category": "build",
+      "severity": "high",
+      "why": "Without it every run may resolve a different provider version, so the plan you reviewed and the plan that applies can differ. Provider upgrades have destroyed resources this way.",
+      "action": "Commit the lock file and treat a change to it as a reviewable event rather than noise.",
+      "verify": {
+        "cmd": "git ls-files '.terraform.lock.hcl' '**/.terraform.lock.hcl'",
+        "expect": "At least one lock file is tracked, for each directory that is applied."
+      },
+      "references": [
+        "https://developer.hashicorp.com/terraform/language/files/dependency-lock"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "hcl.terraform.versions-pinned",
+      "title": "Tool and provider versions are constrained",
+      "category": "build",
+      "severity": "high",
+      "why": "An unconstrained provider picks up a major release on the next init, and a major provider release renames and replaces resources. The first sign is a plan that wants to destroy a database.",
+      "action": "Declare required_version for the tool and a version constraint for every provider in required_providers.",
+      "verify": {
+        "cmd": "grep -rn -A6 'required_providers\\|required_version' --include='*.tf' . 2>/dev/null | head -20",
+        "expect": "A required_version constraint, and a version line for each provider rather than a bare source."
+      },
+      "references": [
+        "https://developer.hashicorp.com/terraform/language/providers/requirements"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "hcl.terraform.working-directory-not-committed",
+      "title": "The working directory is not tracked in git",
+      "category": "build",
+      "severity": "recommended",
+      "why": "It holds downloaded provider binaries and a copy of the backend configuration, which can include a backend access key. It also makes every diff unreadable.",
+      "action": "Add the working directory to gitignore and remove it from tracking if it is already there.",
+      "verify": {
+        "cmd": "git ls-files '.terraform/*' | head -5",
+        "expect": "Nothing is listed."
+      },
+      "references": [
+        "https://developer.hashicorp.com/terraform/cli/init"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "hcl.terraform.variable-files-not-committed",
+      "title": "Variable files carrying real values are not committed",
+      "category": "secrets",
+      "severity": "high",
+      "why": "A variable file is where production credentials end up, and the automatically loaded ones are easy to commit by accident because nothing prompts for them.",
+      "action": "Keep committed variable files to non-secret defaults and an example file. Supply real values from the environment or a secret store.",
+      "verify": {
+        "cmd": "git ls-files '*.tfvars' '*.tfvars.json' | grep -v example | head -10",
+        "expect": "Nothing beyond example files. Anything else needs its contents checked and probably rotated."
+      },
+      "references": [
+        "https://developer.hashicorp.com/terraform/language/values/variables"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "hcl.terraform.stateful-resources-protected",
+      "title": "Resources that cannot be recreated are protected from destruction",
+      "category": "reliability",
+      "severity": "high",
+      "why": "A rename, a changed argument that forces replacement, or a wrong workspace turns one apply into data loss. Databases, buckets and volumes do not come back.",
+      "action": "Set prevent_destroy in a lifecycle block on every resource whose loss would be unrecoverable, and pair it with backups you have restored from at least once.",
+      "verify": {
+        "cmd": "grep -rn 'prevent_destroy' --include='*.tf' . 2>/dev/null | head -10",
+        "expect": "Each database, bucket or volume in the configuration is covered. An empty result on a configuration with stateful resources is the finding."
+      },
+      "references": [
+        "https://developer.hashicorp.com/terraform/language/meta-arguments/lifecycle"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "hcl.terraform.plan-reviewed-before-apply",
+      "title": "The plan a human read is the plan that gets applied",
+      "category": "reliability",
+      "severity": "high",
+      "why": "Applying without a saved plan re-plans at apply time, so what runs is not what was reviewed. Anything that changed in between, including a provider release, arrives unreviewed.",
+      "action": "Save the plan to a file, review that file, and apply the saved plan. In automation, make the saved plan the artifact that moves between the review step and the apply step.",
+      "verify": {
+        "manual": "Look at how apply is invoked in CI or in the runbook, and confirm it applies a saved plan file rather than re-planning."
+      },
+      "references": [
+        "https://developer.hashicorp.com/terraform/cli/commands/plan"
+      ],
+      "added": "2026-08-22"
+    }
+  ]
+}
