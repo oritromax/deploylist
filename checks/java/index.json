@@ -1,0 +1,92 @@
+{
+  "$schema": "../../schema/layer.schema.json",
+  "schema_version": 1,
+  "id": "java",
+  "kind": "language",
+  "name": "Java",
+  "extends": [
+    "universal"
+  ],
+  "checks": [
+    {
+      "id": "java.no-snapshot-dependencies",
+      "title": "No snapshot dependency is in the release build",
+      "category": "build",
+      "severity": "high",
+      "why": "A snapshot resolves to whatever was published most recently, so the same commit builds differently on different days and the artifact you tested is not the one that ships.",
+      "action": "Pin every dependency to a released version before tagging. Keep snapshots to local development and to modules you are actively changing.",
+      "verify": {
+        "cmd": "grep -rn 'SNAPSHOT' --include=pom.xml --include='*.gradle' --include='*.gradle.kts' . 2>/dev/null | head -10",
+        "expect": "Nothing, other than the project's own version while it is unreleased."
+      },
+      "references": [
+        "https://docs.oracle.com/en/java/"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "java.no-debug-agent-in-production",
+      "title": "The debug agent is not enabled in production",
+      "category": "security",
+      "severity": "critical",
+      "why": "A listening debug agent lets anyone who can reach the port load classes and execute code inside the process. There is no authentication on it, and it is usually left behind after an incident.",
+      "action": "Remove the debug agent flags from production start scripts and container images, and confirm the port is not exposed. If remote debugging is needed, bind it to localhost and tunnel.",
+      "verify": {
+        "cmd": "grep -rnE 'agentlib:jdwp|-Xdebug|-Xrunjdwp' --include=Dockerfile --include='*.sh' --include='*.yml' --include='*.yaml' --include='*.conf' . 2>/dev/null | head -10",
+        "expect": "No production start path enables it. A hit in a development compose file or a debug profile is fine."
+      },
+      "references": [
+        "https://docs.oracle.com/en/java/javase/21/docs/specs/jpda/conninv.html"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "java.heap-bounded-in-container",
+      "title": "The heap is bounded against the container limit",
+      "category": "reliability",
+      "severity": "high",
+      "why": "A modern runtime reads the container limit, but only if one is set. With no limit it sizes the heap against host memory, grows into it, and is killed by the platform rather than by its own collector.",
+      "action": "Set a memory limit on the container and size the heap as a percentage of it, leaving headroom for stacks, metaspace and native buffers.",
+      "verify": {
+        "cmd": "grep -rnE 'MaxRAMPercentage|-Xmx|memory:' --include=Dockerfile --include='*.yml' --include='*.yaml' . 2>/dev/null | head -10",
+        "expect": "A container memory limit exists, and the heap is sized relative to it rather than left to the default."
+      },
+      "references": [
+        "https://docs.oracle.com/en/java/javase/21/gctuning/"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "java.toolchain-version-declared",
+      "title": "The build declares which Java version it targets",
+      "category": "build",
+      "severity": "recommended",
+      "why": "Without a declared release target the build compiles against whatever runtime the machine has, and a class file built on a newer runtime fails at startup on an older one with an error that names a version number and nothing else.",
+      "action": "Declare the release or toolchain version in the build file so the compiler is checked against it rather than inferring it from the environment.",
+      "verify": {
+        "cmd": "grep -rnE 'maven.compiler.release|<release>|sourceCompatibility|languageVersion|<java.version>' --include=pom.xml --include='*.gradle' --include='*.gradle.kts' . 2>/dev/null | head -10",
+        "expect": "A version is declared in the build file."
+      },
+      "references": [
+        "https://docs.oracle.com/en/java/javase/21/docs/specs/man/javac.html"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "java.dependency-vulnerabilities-reviewed",
+      "title": "Known vulnerabilities in dependencies have been reviewed",
+      "category": "security",
+      "severity": "high",
+      "why": "A typical service pulls in hundreds of transitive artifacts. The ones that caused the worst incidents of the last decade were all transitive, and nothing in a normal build fails when one is vulnerable.",
+      "action": "Run a dependency scanner before a release and decide on each finding, recording a reason where you accept one.",
+      "verify": {
+        "suggest": "mvn org.owasp:dependency-check-maven:check",
+        "expect": "No unreviewed finding above your agreed threshold. Gradle projects have an equivalent task."
+      },
+      "references": [
+        "https://docs.oracle.com/en/java/"
+      ],
+      "added": "2026-08-22"
+    }
+  ]
+}

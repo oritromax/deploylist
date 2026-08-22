@@ -1,0 +1,126 @@
+{
+  "$schema": "../../schema/layer.schema.json",
+  "schema_version": 1,
+  "id": "java.spring-boot",
+  "kind": "framework",
+  "name": "Spring Boot",
+  "extends": [
+    "universal",
+    "java",
+    "web"
+  ],
+  "checks": [
+    {
+      "id": "java.spring-boot.actuator-endpoints-restricted",
+      "title": "Actuator exposes only the endpoints you chose",
+      "category": "security",
+      "severity": "critical",
+      "why": "Exposing everything publishes env, configprops and heapdump. The heap dump contains every credential the process has ever held in memory, and it is a plain download with no authentication in front of it.",
+      "action": "List the endpoints you actually need, usually health and info. Put the rest behind authentication or on a management port that is not routed from outside.",
+      "verify": {
+        "cmd": "grep -rnE 'management.endpoints.web.exposure' --include='application*.properties' --include='application*.yml' --include='application*.yaml' . 2>/dev/null | head -10",
+        "expect": "An explicit list of endpoints. A wildcard, or exposure of env, heapdump or configprops, is the finding."
+      },
+      "references": [
+        "https://docs.spring.io/spring-boot/reference/actuator/endpoints.html"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "java.spring-boot.devtools-not-in-production",
+      "title": "DevTools is not on the production classpath",
+      "category": "security",
+      "severity": "high",
+      "why": "DevTools restarts the application when files change, disables template and resource caching, and can open a remote debug channel. On a production classpath it is both a performance problem and an attack surface.",
+      "action": "Keep the dependency optional in Maven or in the developmentOnly configuration in Gradle, so it is excluded from the packaged artifact.",
+      "verify": {
+        "cmd": "grep -rn -B2 -A4 'spring-boot-devtools' --include=pom.xml --include='*.gradle' --include='*.gradle.kts' . 2>/dev/null | head -20",
+        "expect": "The dependency is marked optional or developmentOnly. A plain compile or implementation dependency ships it."
+      },
+      "references": [
+        "https://docs.spring.io/spring-boot/reference/using/devtools.html"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "java.spring-boot.schema-not-generated-at-startup",
+      "title": "The schema is not altered by the application at startup",
+      "category": "reliability",
+      "severity": "critical",
+      "why": "Letting the ORM update the schema means a deploy can drop a column or a table because a field was renamed. On create-drop it discards the database on every restart. Neither failure announces itself before it happens.",
+      "action": "Set the generation strategy to validate or none in production and move schema changes to a migration tool that runs deliberately and can be reviewed.",
+      "verify": {
+        "cmd": "grep -rnE 'ddl-auto|hibernate.hbm2ddl' --include='application*.properties' --include='application*.yml' --include='application*.yaml' . 2>/dev/null | head -10",
+        "expect": "validate or none for the production profile. update, create or create-drop is the finding."
+      },
+      "references": [
+        "https://docs.spring.io/spring-boot/how-to/data-initialization.html"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "java.spring-boot.h2-console-disabled",
+      "title": "The database console is not enabled",
+      "category": "security",
+      "severity": "critical",
+      "why": "The console is a web page that runs arbitrary SQL against the datasource, and in common configurations it reaches any JDBC URL. Left enabled and reachable, it is a full compromise of the database and often of the host.",
+      "action": "Disable the console outside development. If it is needed locally, enable it in a development profile only.",
+      "verify": {
+        "cmd": "grep -rnE 'h2.console' --include='application*.properties' --include='application*.yml' --include='application*.yaml' . 2>/dev/null | head -10",
+        "expect": "Not enabled, or enabled only in a development profile that production never activates."
+      },
+      "references": [
+        "https://docs.spring.io/spring-boot/how-to/data-access.html"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "java.spring-boot.error-details-not-returned",
+      "title": "Error responses do not carry stack traces or messages",
+      "category": "security",
+      "severity": "high",
+      "why": "A returned stack trace names your framework versions, package layout and often the failing query. It is the cheapest reconnaissance an attacker can do, and it is handed over by the application itself.",
+      "action": "Leave stack traces off, and return messages only where you wrote them deliberately. Log the detail instead, with a correlation id the caller can quote.",
+      "verify": {
+        "cmd": "grep -rnE 'server.error.include' --include='application*.properties' --include='application*.yml' --include='application*.yaml' . 2>/dev/null | head -10",
+        "expect": "include-stacktrace is never, and include-message and include-binding-errors are not on always."
+      },
+      "references": [
+        "https://docs.spring.io/spring-boot/reference/web/servlet.html"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "java.spring-boot.production-profile-active",
+      "title": "The production profile is actually the one that is active",
+      "category": "config",
+      "severity": "high",
+      "why": "Every setting above is usually correct in the production profile and wrong in the default one. If nothing sets the active profile, the application starts with the defaults and every one of those settings is the development value.",
+      "action": "Set the active profile explicitly in the deployment environment rather than relying on a default in the packaged configuration, and log which profile started.",
+      "verify": {
+        "cmd": "grep -rnE 'SPRING_PROFILES_ACTIVE|spring.profiles.active' --include=Dockerfile --include='*.yml' --include='*.yaml' --include='*.properties' --include='*.sh' . 2>/dev/null | head -10",
+        "expect": "The deployment sets it. A value set only inside the packaged configuration is easy to override by accident."
+      },
+      "references": [
+        "https://docs.spring.io/spring-boot/reference/features/profiles.html"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "java.spring-boot.no-default-security-credentials",
+      "title": "No account is left on a default or generated password",
+      "category": "security",
+      "severity": "critical",
+      "why": "The default single user with a password printed at startup is meant for a first run. Left in place it is a known username with a credential that appears in the log everyone can read.",
+      "action": "Replace the default user with a real authentication provider, and remove any password committed to configuration. Rotate anything that was ever written down.",
+      "verify": {
+        "cmd": "grep -rnE 'spring.security.user' --include='application*.properties' --include='application*.yml' --include='application*.yaml' . 2>/dev/null | head -10",
+        "expect": "No committed password. Ideally no configured static user at all in production."
+      },
+      "references": [
+        "https://docs.spring.io/spring-boot/reference/web/spring-security.html"
+      ],
+      "added": "2026-08-22"
+    }
+  ]
+}
