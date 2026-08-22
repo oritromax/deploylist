@@ -1,0 +1,110 @@
+{
+  "$schema": "../../schema/layer.schema.json",
+  "schema_version": 1,
+  "id": "python.flask",
+  "kind": "framework",
+  "name": "Flask",
+  "extends": [
+    "universal",
+    "python",
+    "web"
+  ],
+  "checks": [
+    {
+      "id": "python.flask.debug-off",
+      "title": "Debug mode is off",
+      "category": "security",
+      "severity": "critical",
+      "why": "Debug mode serves an interactive debugger on any unhandled exception, and that debugger runs Python you type into the page. Reachable from the internet it is remote code execution as the application user, protected only by a pin that is derived from information the same page leaks.",
+      "action": "Never enable debug outside a local machine. Confirm it is off in the code, in the environment, and in whatever starts the process, then trigger an error in staging and check that the response is a plain error page.",
+      "verify": {
+        "cmd": "grep -rnE 'debug[[:space:]]*=[[:space:]]*True|FLASK_DEBUG|FLASK_ENV' --include='*.py' --include=Dockerfile --include='*.sh' --include='*.yml' --include='*.yaml' --include='*.env*' . 2>/dev/null | head -10",
+        "expect": "Nothing outside local development configuration. Any production path that sets it is the finding."
+      },
+      "references": [
+        "https://flask.palletsprojects.com/en/stable/debugging/"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "python.flask.secret-key-strong-and-external",
+      "title": "The secret key is real, secret, and loaded from the environment",
+      "category": "secrets",
+      "severity": "critical",
+      "why": "The secret key signs the session cookie. A committed, guessable or placeholder key lets anyone mint a session for any user, including an administrator, without touching the database.",
+      "action": "Generate a long random key, load it from the environment or a secret store, and rotate it if it was ever committed. Rotation logs everyone out, which is the cheap part.",
+      "verify": {
+        "cmd": "grep -rnE 'SECRET_KEY|secret_key' --include='*.py' --include='*.cfg' --include='*.toml' . 2>/dev/null | head -10",
+        "expect": "The key is read from the environment. A literal string, a default like dev or changeme, or no key at all is the finding."
+      },
+      "references": [
+        "https://flask.palletsprojects.com/en/stable/config/"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "python.flask.production-server-not-dev",
+      "title": "The application is served by a production server",
+      "category": "reliability",
+      "severity": "high",
+      "why": "The built-in server is single-threaded by default and explicitly documented as unsuitable for production. It has no worker management, no graceful restart and no protection against a slow client holding a connection open.",
+      "action": "Run the application under a production WSGI server with a deliberate worker count, and keep the development command out of images and deploy scripts.",
+      "verify": {
+        "cmd": "grep -rnE 'app.run\\(|flask[\",[:space:]]+run|gunicorn|uwsgi|waitress' --include='*.py' --include=Dockerfile --include='*.sh' --include='*.yml' --include='*.yaml' . 2>/dev/null | head -10",
+        "expect": "A production server on the deploy path. A bare app.run or flask run there is the finding."
+      },
+      "references": [
+        "https://flask.palletsprojects.com/en/stable/deploying/"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "python.flask.session-cookie-hardened",
+      "title": "The session cookie is restricted to HTTPS and to the server",
+      "category": "security",
+      "severity": "high",
+      "why": "Without the secure flag the session cookie travels over plain HTTP on the first request to a bare domain. Without the HTTP-only flag any injected script can read it, and without a same-site policy it is sent on cross-site requests.",
+      "action": "Set the cookie to secure and HTTP-only, and choose a same-site policy deliberately rather than relying on the browser default.",
+      "verify": {
+        "cmd": "grep -rnE 'SESSION_COOKIE_(SECURE|HTTPONLY|SAMESITE)' --include='*.py' --include='*.cfg' --include='*.toml' . 2>/dev/null | head -10",
+        "expect": "Secure is true, HTTP-only is true, and a same-site value is set. Missing settings mean the defaults apply."
+      },
+      "references": [
+        "https://flask.palletsprojects.com/en/stable/config/"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "python.flask.proxy-headers-handled",
+      "title": "Forwarded headers are handled when running behind a proxy",
+      "category": "reliability",
+      "severity": "recommended",
+      "why": "Without the middleware every request looks like it came from the proxy over plain HTTP, so rate limiting and audit logs record the wrong client and generated absolute URLs come out as http on an https site.",
+      "action": "Wrap the application in the proxy fix middleware and tell it exactly how many proxies sit in front, so a client cannot add a forwarded header of its own.",
+      "verify": {
+        "cmd": "grep -rnE 'ProxyFix|X-Forwarded-For|werkzeug.middleware.proxy_fix' --include='*.py' . 2>/dev/null | head -10",
+        "expect": "The middleware is applied with an explicit count of trusted proxies."
+      },
+      "references": [
+        "https://flask.palletsprojects.com/en/stable/deploying/proxy_fix/"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "python.flask.request-size-bounded",
+      "title": "Request bodies are bounded",
+      "category": "reliability",
+      "severity": "recommended",
+      "why": "With no limit, an upload is read until it finishes or the machine runs out of memory, and it costs an attacker nothing to start several at once.",
+      "action": "Set a maximum content length appropriate to your endpoints, and cap the body size at the proxy as well so the request is rejected before it reaches the application.",
+      "verify": {
+        "cmd": "grep -rnE 'MAX_CONTENT_LENGTH|client_max_body_size' --include='*.py' --include='*.cfg' --include='*.conf' --include='*.toml' . 2>/dev/null | head -10",
+        "expect": "A limit is set in the application or at the proxy in front of it."
+      },
+      "references": [
+        "https://flask.palletsprojects.com/en/stable/config/"
+      ],
+      "added": "2026-08-22"
+    }
+  ]
+}
