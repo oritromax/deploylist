@@ -25,6 +25,15 @@ const CATEGORIES = ['security', 'secrets', 'config', 'performance', 'seo',
 // The host sets no CORS headers by default, and the whole product is agents
 // fetching these URLs, so a browser-context consumer needs the first line.
 //
+// One policy, site-wide. A per-path rule cannot loosen this: the host appends
+// matching rules rather than replacing them, the browser then enforces every
+// Content-Security-Policy header it receives, and a resource has to satisfy
+// all of them. Two policies can only ever be more restrictive than one.
+//
+// `style-src 'self'` exists for the landing page, the only document here that
+// renders. Everything else stays denied, scripts included -- the site has no
+// JavaScript of its own and nothing should be able to add any.
+//
 // The rest are the four headers universal.security-headers asks every site for,
 // kept here rather than in the CDN dashboard so they are version-controlled,
 // reviewable in a diff, and covered by CODEOWNERS. The site serves no HTML and
@@ -35,18 +44,10 @@ const CATEGORIES = ['security', 'secrets', 'config', 'performance', 'seo',
 const HEADERS = `/*
   Access-Control-Allow-Origin: *
   Cache-Control: public, max-age=600
-  Content-Security-Policy: default-src 'none'; frame-ancestors 'none'; base-uri 'none'
+  Content-Security-Policy: default-src 'none'; style-src 'self'; frame-ancestors 'none'; base-uri 'none'
   Referrer-Policy: no-referrer
   Strict-Transport-Security: max-age=15552000; includeSubDomains
   X-Content-Type-Options: nosniff
-
-# The landing page is the one document that renders, so it is the one path that
-# may load anything at all: its own stylesheet, same origin, and nothing else.
-# No scripts, here or anywhere.
-/
-  Content-Security-Policy: default-src 'none'; style-src 'self'; frame-ancestors 'none'; base-uri 'none'
-/index.html
-  Content-Security-Policy: default-src 'none'; style-src 'self'; frame-ancestors 'none'; base-uri 'none'
 `;
 
 const written = [];
