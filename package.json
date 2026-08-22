@@ -1,0 +1,18 @@
+{
+  "name": "deploylist",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Pre-deployment checklists for web projects, one per stack.",
+  "scripts": {
+    "lint": "node lint/index.js",
+    "build": "node build/index.js",
+    "test": "node --test test/",
+    "check": "npm run lint && npm test && npm run build"
+  },
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1"
+  }
+}

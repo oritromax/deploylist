@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Published surface — generated from checks/ by `npm run build`, rebuilt by CI
+# on every push. Never committed, so it cannot drift from its source.
+dist/
+
+# Agent worktrees and local session state
+.claude/
+
+# Not public yet. SPEC.md describes unreleased project plans; keep it out of
+# history until the project is announced, then delete this entry and commit it.
+SPEC.md
+
+# Local environment
+.env
+.env.*
+!.env.example
+
+# Logs and editor noise
+*.log
+npm-debug.log*
+.DS_Store
+.idea/
+.vscode/
