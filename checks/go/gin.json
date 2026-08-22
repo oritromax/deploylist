@@ -1,0 +1,95 @@
+{
+  "$schema": "../../schema/layer.schema.json",
+  "schema_version": 1,
+  "id": "go.gin",
+  "kind": "framework",
+  "name": "Gin",
+  "extends": [
+    "universal",
+    "go",
+    "web"
+  ],
+  "checks": [
+    {
+      "id": "go.gin.release-mode",
+      "title": "The router runs in release mode",
+      "category": "config",
+      "severity": "high",
+      "why": "Debug mode prints every registered route at startup and logs debug output per request. The route table in a log aggregator is a map of the application, and the per-request work is paid on every call for no benefit.",
+      "action": "Set release mode explicitly in code or through the environment on the production start path, rather than relying on the default.",
+      "verify": {
+        "cmd": "grep -rnE 'gin.SetMode|GIN_MODE' --include='*.go' --include=Dockerfile --include='*.yml' --include='*.yaml' --include='*.sh' . 2>/dev/null | head -10",
+        "expect": "Release mode is set for production. Nothing found means the router starts in debug mode."
+      },
+      "references": [
+        "https://gin-gonic.com/en/docs/deployment/"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "go.gin.recovery-middleware-present",
+      "title": "A panic in a handler cannot take the process down",
+      "category": "reliability",
+      "severity": "critical",
+      "why": "An unrecovered panic in a handler ends the whole process, not just the request, so one malformed input becomes an outage for every connected client. The convenience constructor includes recovery; building the router manually does not.",
+      "action": "Register recovery middleware whenever the router is constructed without it, and make sure it logs the panic rather than swallowing it.",
+      "verify": {
+        "cmd": "grep -rnE 'gin.New\\(\\)|gin.Default\\(\\)|gin.Recovery\\(\\)' --include='*.go' . 2>/dev/null | head -10",
+        "expect": "Either the default constructor, or a manual router with recovery registered. A manual router without it is the finding."
+      },
+      "references": [
+        "https://gin-gonic.com/en/docs/quickstart/"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "go.gin.server-timeouts-set",
+      "title": "The HTTP server has read and write timeouts",
+      "category": "reliability",
+      "severity": "high",
+      "why": "The convenience run method starts a server with no timeouts at all, so a client that opens a connection and sends a byte a minute holds a goroutine and a file descriptor indefinitely. Enough of those and the service stops accepting connections without ever looking busy.",
+      "action": "Construct the server explicitly with read, write and idle timeouts and pass the router as its handler, rather than using the convenience method.",
+      "verify": {
+        "cmd": "grep -rnE 'ReadTimeout|WriteTimeout|IdleTimeout|ReadHeaderTimeout|\\.Run\\(' --include='*.go' . 2>/dev/null | head -10",
+        "expect": "An http.Server with timeouts set. Only a Run call, with no timeouts anywhere, is the finding."
+      },
+      "references": [
+        "https://pkg.go.dev/net/http"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "go.gin.trusted-proxies-restricted",
+      "title": "Trusted proxies are named rather than assumed",
+      "category": "security",
+      "severity": "high",
+      "why": "By default the router trusts forwarded headers from any client, so the reported client address is whatever the caller says it is. Rate limiting, audit logs and address-based rules all become suggestions.",
+      "action": "Set the trusted proxy list to the addresses your load balancer actually uses, or disable proxy trust entirely if nothing sits in front.",
+      "verify": {
+        "cmd": "grep -rnE 'SetTrustedProxies|TrustedPlatform|ForwardedByClientIP' --include='*.go' . 2>/dev/null | head -10",
+        "expect": "The proxy list is set explicitly, to specific addresses or to nil. Nothing found means every client is trusted."
+      },
+      "references": [
+        "https://gin-gonic.com/en/docs/faq/"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "go.gin.upload-size-bounded",
+      "title": "Uploads are bounded before they reach memory",
+      "category": "reliability",
+      "severity": "recommended",
+      "why": "Multipart parsing buffers a fixed amount per request in memory before spilling to disk, and the default is generous. A handful of concurrent uploads can push a small container into the platform's memory limit.",
+      "action": "Lower the multipart memory limit to what your endpoints actually need, and cap the request body size in middleware or at the proxy.",
+      "verify": {
+        "cmd": "grep -rnE 'MaxMultipartMemory|MaxBytesReader|client_max_body_size' --include='*.go' --include='*.conf' --include='*.yml' --include='*.yaml' . 2>/dev/null | head -10",
+        "expect": "A limit is set somewhere on the path, in the application or at the proxy in front of it."
+      },
+      "references": [
+        "https://gin-gonic.com/en/docs/",
+        "https://pkg.go.dev/net/http"
+      ],
+      "added": "2026-08-22"
+    }
+  ]
+}
