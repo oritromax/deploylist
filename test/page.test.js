@@ -33,12 +33,17 @@ test('the page says it will not change anything, autopilot included', () => {
 test('coverage comes from the catalog, so it cannot drift', () => {
   const catalog = JSON.parse(read('index.json')).stacks;
   const html = read('index.html');
-  for (const stack of catalog.filter((s) => s.kind !== 'universal')) {
+  const listed = catalog.filter((s) => s.kind === 'language' || s.kind === 'framework');
+  for (const stack of listed) {
     assert.ok(html.includes(`>${stack.title}</a>`),
       `${stack.title} is published but missing from the page`);
   }
   // The universal layer is linked by what it is, not by its layer name.
   assert.match(html, /universal\.md">universal\s+checks<\/a>/);
+  // Surfaces are published too, and a visitor should be able to find them.
+  for (const surface of catalog.filter((s) => s.kind === 'surface')) {
+    assert.ok(html.includes(`/${surface.stem}.md">`), `${surface.id} is not linked`);
+  }
   for (const planned of PLANNED) assert.ok(html.includes(`<li>${planned}</li>`));
 });
 

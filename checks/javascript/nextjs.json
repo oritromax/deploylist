@@ -6,11 +6,12 @@
   "name": "Next.js",
   "extends": [
     "universal",
-    "javascript"
+    "javascript",
+    "web"
   ],
   "suppressions": [
     {
-      "id": "universal.security-headers",
+      "id": "web.security-headers",
       "reason": "Replaced by the framework-specific check below, which verifies the headers config in next.config rather than asking the operator to inspect responses by hand."
     }
   ],
