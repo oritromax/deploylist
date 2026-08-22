@@ -80,6 +80,10 @@ own; that produces a diff a reviewer can actually read.
 - One check, or one coherent group of checks, per PR. Easier to review, easier
   to revert.
 - A brand-new stack is its own PR and needs maintainer review.
+- A new stack also needs a link on the landing page, which is hand-written at
+  `site/index.html`. The build copies that file as-is rather than generating
+  it, so the page is yours to lay out; a test fails if it is missing a stack
+  that is published, or links one that is not.
 - Say in the PR body how you verified the command works, on what version.
 
 ## Running the gate locally

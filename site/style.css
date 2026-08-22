@@ -1,0 +1,229 @@
+/* deploy-list.com — hand-authored. No build step touches this file; the build
+   copies it as-is. Edit it like any stylesheet. */
+
+:root {
+  color-scheme: light dark;
+
+  --ink:        #16161a;
+  --ink-soft:   #52525c;
+  --ink-faint:  #8a8a94;
+  --page:       #fcfcfb;
+  --raised:     #ffffff;
+  --sunk:       #f4f4f1;
+  --rule:       #e4e4de;
+  --rule-firm:  #d3d3cb;
+  --accent:     #1f6f4a;
+  --accent-ink: #ffffff;
+  --warn-edge:  #d9c9a3;
+  --warn-bg:    #fbf6e9;
+
+  --measure: 44rem;
+  --wide: 64rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:        #ececed;
+    --ink-soft:   #a6a6b0;
+    --ink-faint:  #74747e;
+    --page:       #101012;
+    --raised:     #17171a;
+    --sunk:       #1c1c20;
+    --rule:       #2a2a2f;
+    --rule-firm:  #3a3a41;
+    --accent:     #5fbf8f;
+    --accent-ink: #0d0d0f;
+    --warn-edge:  #4a422c;
+    --warn-bg:    #201d15;
+  }
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+  font: 16px/1.65 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+        "Helvetica Neue", Arial, sans-serif;
+  font-feature-settings: "kern", "liga";
+}
+
+.wrap { max-width: var(--wide); margin: 0 auto; padding: 0 1.5rem; }
+.column { max-width: var(--measure); }
+
+a { color: var(--ink); text-decoration-color: var(--rule-firm); text-underline-offset: 0.15em; }
+a:hover { text-decoration-color: currentColor; }
+
+code, kbd, pre {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+/* ---- masthead ---------------------------------------------------------- */
+
+.masthead {
+  border-bottom: 1px solid var(--rule);
+  background: var(--raised);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+.masthead .wrap {
+  display: flex;
+  align-items: baseline;
+  gap: 1.5rem;
+  padding-block: 0.9rem;
+}
+.wordmark {
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  text-decoration: none;
+  font-size: 1.05rem;
+}
+.wordmark::before {
+  content: "";
+  display: inline-block;
+  width: 0.5rem; height: 0.5rem;
+  margin-right: 0.5rem;
+  border-radius: 50%;
+  background: var(--accent);
+  vertical-align: middle;
+}
+.masthead nav { margin-left: auto; display: flex; gap: 1.25rem; font-size: 0.92rem; }
+.masthead nav a { color: var(--ink-soft); text-decoration: none; }
+.masthead nav a:hover { color: var(--ink); }
+
+/* ---- hero -------------------------------------------------------------- */
+
+.hero { padding-block: 4.5rem 3rem; }
+.hero h1 {
+  margin: 0 0 1rem;
+  font-size: clamp(2rem, 5.5vw, 3.1rem);
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+  font-weight: 660;
+}
+.lede { margin: 0; font-size: clamp(1.05rem, 2.2vw, 1.2rem); color: var(--ink-soft); }
+
+.give-agent {
+  margin: 2.25rem 0 0;
+  border: 1px solid var(--rule-firm);
+  border-radius: 10px;
+  background: var(--raised);
+  overflow: hidden;
+  max-width: var(--measure);
+}
+.give-agent .label {
+  padding: 0.55rem 1rem;
+  border-bottom: 1px solid var(--rule);
+  background: var(--sunk);
+  font-size: 0.72rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.give-agent .url {
+  margin: 0;
+  padding: 1rem;
+  font-size: clamp(0.95rem, 2.6vw, 1.15rem);
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.give-agent .url a { text-decoration: none; }
+.give-agent .aside {
+  margin: 0;
+  padding: 0.75rem 1rem 0.9rem;
+  border-top: 1px dashed var(--rule);
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+}
+
+/* ---- sections ---------------------------------------------------------- */
+
+section { padding-block: 2.75rem; border-top: 1px solid var(--rule); }
+section > .wrap > h2, section > .wrap > .column > h2 {
+  margin: 0 0 1rem;
+  font-size: 1.05rem;
+  letter-spacing: 0.01em;
+  font-weight: 640;
+}
+section p { margin: 0 0 1rem; }
+section p:last-child { margin-bottom: 0; }
+
+.eyebrow {
+  margin: 0 0 0.4rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* ---- steps ------------------------------------------------------------- */
+
+.steps { display: grid; gap: 1.25rem; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); margin: 0; padding: 0; list-style: none; }
+.steps li { border-top: 2px solid var(--accent); padding-top: 0.75rem; }
+.steps b { display: block; font-weight: 620; }
+.steps span { color: var(--ink-soft); font-size: 0.95rem; }
+
+/* ---- cards ------------------------------------------------------------- */
+
+.cards { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); margin: 0; padding: 0; list-style: none; }
+.card {
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  background: var(--raised);
+  padding: 1.1rem 1.15rem;
+}
+.card h3 { margin: 0 0 0.4rem; font-size: 0.98rem; font-weight: 630; }
+.card p { margin: 0; color: var(--ink-soft); font-size: 0.94rem; }
+
+/* ---- coverage ---------------------------------------------------------- */
+
+.stacks { display: grid; gap: 0.75rem; grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr)); margin: 0 0 1.25rem; padding: 0; list-style: none; }
+.stack {
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  padding: 0.8rem 0.9rem;
+  background: var(--raised);
+}
+.stack a { text-decoration: none; font-weight: 600; }
+.stack .kids { display: block; margin-top: 0.15rem; font-size: 0.88rem; color: var(--ink-soft); }
+.stack .kids a { font-weight: 400; text-decoration: underline; text-decoration-color: var(--rule-firm); }
+
+.planned { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0 0 1rem; padding: 0; list-style: none; }
+.planned li {
+  border: 1px dashed var(--rule-firm);
+  border-radius: 999px;
+  padding: 0.25rem 0.8rem;
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+}
+
+/* ---- warning ----------------------------------------------------------- */
+
+.warning {
+  border: 1px solid var(--warn-edge);
+  background: var(--warn-bg);
+  border-radius: 10px;
+  padding: 1.1rem 1.2rem;
+}
+.warning h2 { margin-top: 0; }
+.warning p:last-child { margin-bottom: 0; color: var(--ink-soft); font-size: 0.94rem; }
+
+/* ---- footer ------------------------------------------------------------ */
+
+footer {
+  border-top: 1px solid var(--rule);
+  padding-block: 2rem 3rem;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+}
+footer .links { display: flex; flex-wrap: wrap; gap: 1rem; margin: 0 0 0.75rem; padding: 0; list-style: none; }
+footer p { margin: 0.3rem 0; }
+
+@media (max-width: 34rem) {
+  .masthead nav { display: none; }
+  .hero { padding-block: 3rem 2rem; }
+}
