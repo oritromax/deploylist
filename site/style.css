@@ -50,6 +50,7 @@
   --rust: #a8431f;  --rust-bg: #fbeee8;
   --tf:   #7b42bc;  --tf-bg:   #f2ebfa;
   --java: #b0413e;  --java-bg: #fbecec;
+  --cs:   #68217a;  --cs-bg:   #f6ecf9;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -60,6 +61,7 @@
     --rust: #e08a63;  --rust-bg: #2a1a13;
     --tf:   #b98ce8;  --tf-bg:   #211836;
     --java: #e58c89;  --java-bg: #2c1817;
+    --cs:   #c88fd8;  --cs-bg:   #241629;
   }
 }
 
@@ -275,6 +277,7 @@ section p:last-child { margin-bottom: 0; }
 .stack.rust { --tint: var(--rust); --tint-bg: var(--rust-bg); }
 .stack.tf   { --tint: var(--tf);   --tint-bg: var(--tf-bg); }
 .stack.java { --tint: var(--java); --tint-bg: var(--java-bg); }
+.stack.cs   { --tint: var(--cs);   --tint-bg: var(--cs-bg); }
 
 .mark { width: 2.5rem; height: 2.5rem; flex: none; }
 .mark rect { fill: var(--tint-bg); }

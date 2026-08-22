@@ -1,0 +1,126 @@
+{
+  "$schema": "../../schema/layer.schema.json",
+  "schema_version": 1,
+  "id": "csharp.aspnet-core",
+  "kind": "framework",
+  "name": "ASP.NET Core",
+  "extends": [
+    "universal",
+    "csharp",
+    "web"
+  ],
+  "checks": [
+    {
+      "id": "csharp.aspnet-core.environment-is-production",
+      "title": "The environment is set to Production",
+      "category": "config",
+      "severity": "critical",
+      "why": "The environment name decides which configuration file wins and whether the developer exception page is served. Left unset or left as Development, a deployed application shows full stack traces and source to anyone who can make it throw.",
+      "action": "Set the environment variable explicitly in the deployment rather than relying on a default, and log the resolved environment at startup so a wrong value is visible immediately.",
+      "verify": {
+        "cmd": "grep -rniE 'ASPNETCORE_ENVIRONMENT|DOTNET_ENVIRONMENT' --include=Dockerfile --include='*.yml' --include='*.yaml' --include='*.sh' --include='*.json' . 2>/dev/null | head -10",
+        "expect": "The deployment sets it to Production. Development anywhere near the production path is the finding."
+      },
+      "references": [
+        "https://learn.microsoft.com/en-us/aspnet/core/fundamentals/environments"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "csharp.aspnet-core.developer-exception-page-guarded",
+      "title": "The developer exception page is only ever reachable in development",
+      "category": "security",
+      "severity": "critical",
+      "why": "That page returns the exception, the stack trace, the source lines around the failure and the request headers. Called unconditionally rather than inside an environment check, it does all of that in production.",
+      "action": "Keep the call inside a development-only branch, and give production an error handler that returns a generic response with a correlation id.",
+      "verify": {
+        "cmd": "grep -rnE -B3 'UseDeveloperExceptionPage' --include='*.cs' . 2>/dev/null | head -15",
+        "expect": "The call sits inside a development environment check. An unguarded call is the finding."
+      },
+      "references": [
+        "https://learn.microsoft.com/en-us/aspnet/core/fundamentals/error-handling"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "csharp.aspnet-core.no-secrets-in-appsettings",
+      "title": "No credential is committed in a settings file",
+      "category": "secrets",
+      "severity": "critical",
+      "why": "A connection string with a password in a settings file is committed, published in the build output, and copied into every image layer. It is the most common way a database credential leaves a dotnet repository.",
+      "action": "Keep credentials in environment variables or a secret store the application reads at startup, leave placeholders in the committed file, and rotate anything that was ever committed.",
+      "verify": {
+        "cmd": "grep -rniE '(password|pwd|accountkey|apikey)[[:space:]]*=[[:space:]]*[^\";}]' --include='appsettings*.json' . 2>/dev/null | head -10",
+        "expect": "No real value. A placeholder or an empty string is fine."
+      },
+      "references": [
+        "https://learn.microsoft.com/en-us/aspnet/core/security/app-secrets"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "csharp.aspnet-core.data-protection-keys-persisted",
+      "title": "Data protection keys survive a restart and are shared across instances",
+      "category": "reliability",
+      "severity": "high",
+      "why": "By default the keys live in the container filesystem. Every restart mints new ones, which signs out every user and invalidates every antiforgery token, and two instances that do not share keys cannot read each other's cookies.",
+      "action": "Persist the key ring somewhere durable and shared, and protect it at rest. This is a configuration decision, not something the framework can infer.",
+      "verify": {
+        "cmd": "grep -rnE 'AddDataProtection|PersistKeysTo' --include='*.cs' . 2>/dev/null | head -10",
+        "expect": "The key ring is persisted to shared storage. No configuration at all means keys are lost on every restart."
+      },
+      "references": [
+        "https://learn.microsoft.com/en-us/aspnet/core/security/data-protection/configuration/overview"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "csharp.aspnet-core.api-explorer-not-public",
+      "title": "The generated API browser is not open to the internet",
+      "category": "security",
+      "severity": "high",
+      "why": "The generated document lists every endpoint, parameter and model, including the ones meant to be internal, and the browser will call them for whoever is reading.",
+      "action": "Register the generator inside a development-only branch, or keep the routes behind the same authentication as the rest of the private surface.",
+      "verify": {
+        "cmd": "grep -rnE -B3 'UseSwagger|MapOpenApi|AddSwaggerGen|AddOpenApi' --include='*.cs' . 2>/dev/null | head -20",
+        "expect": "Registered only for development, or protected. An unguarded call publishes the API surface."
+      },
+      "references": [
+        "https://learn.microsoft.com/en-us/aspnet/core/fundamentals/openapi/aspnetcore-openapi"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "csharp.aspnet-core.detailed-errors-off",
+      "title": "Detailed error output is not enabled",
+      "category": "security",
+      "severity": "high",
+      "why": "The detailed errors switch turns framework exceptions into responses that name types, assemblies and often configuration values. It is frequently switched on to debug a deployment and left on afterwards.",
+      "action": "Confirm the setting is absent or false in every production configuration file and environment, including the ones added during an incident.",
+      "verify": {
+        "cmd": "grep -rniE 'detailederrors|DetailedErrors' --include='appsettings*.json' --include=Dockerfile --include='*.yml' --include='*.yaml' . 2>/dev/null | head -10",
+        "expect": "Absent, or explicitly false, for production."
+      },
+      "references": [
+        "https://learn.microsoft.com/en-us/aspnet/core/fundamentals/error-handling"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "csharp.aspnet-core.forwarded-headers-configured",
+      "title": "Forwarded headers are handled when running behind a proxy",
+      "category": "reliability",
+      "severity": "recommended",
+      "why": "Without the middleware every request appears to come from the proxy and to be plain HTTP. Rate limiting and audit logs record the wrong client, and redirect and link generation come out as http on an https site.",
+      "action": "Enable forwarded headers and name the proxies you trust, so a client cannot set its own forwarded address.",
+      "verify": {
+        "cmd": "grep -rnE 'UseForwardedHeaders|ForwardedHeadersOptions|KnownProxies|KnownNetworks' --include='*.cs' . 2>/dev/null | head -10",
+        "expect": "Configured, with known proxies or networks named rather than left open."
+      },
+      "references": [
+        "https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/proxy-load-balancer"
+      ],
+      "added": "2026-08-22"
+    }
+  ]
+}

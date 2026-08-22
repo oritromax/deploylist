@@ -1,0 +1,76 @@
+{
+  "$schema": "../../schema/layer.schema.json",
+  "schema_version": 1,
+  "id": "csharp",
+  "kind": "language",
+  "name": "C#",
+  "extends": [
+    "universal"
+  ],
+  "checks": [
+    {
+      "id": "csharp.release-configuration",
+      "title": "The shipped build is a release build",
+      "category": "build",
+      "severity": "high",
+      "why": "A debug build skips optimisation, keeps debug-only code paths and carries attributes that change runtime behaviour. It is measurably slower, and the difference is easy to miss because everything still works.",
+      "action": "Build with the release configuration in the image and in CI, and make the deploy fail rather than fall back to the default.",
+      "verify": {
+        "cmd": "grep -rnE 'dotnet (publish|build)|--configuration|-c Release' --include=Dockerfile --include='*.sh' --include='*.yml' --include='*.yaml' . 2>/dev/null | head -10",
+        "expect": "Every publish or build on the deploy path names the release configuration."
+      },
+      "references": [
+        "https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-publish"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "csharp.package-versions-locked",
+      "title": "Package versions cannot move between restores",
+      "category": "build",
+      "severity": "high",
+      "why": "A floating version resolves to whatever is newest at restore time, so the build that passed review and the build that ships can contain different code with no diff to show for it.",
+      "action": "Pin versions rather than using wildcards, and enable the lock file so a restore fails on an unexpected change instead of accepting it.",
+      "verify": {
+        "cmd": "grep -rnE 'Version=\"[^\"]*\\*|RestorePackagesWithLockFile' --include='*.csproj' --include='Directory.Packages.props' . 2>/dev/null | head -10",
+        "expect": "No wildcard version. Ideally the lock file setting is on and packages.lock.json is committed."
+      },
+      "references": [
+        "https://learn.microsoft.com/en-us/nuget/consume-packages/package-references-in-project-files"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "csharp.target-framework-and-sdk-pinned",
+      "title": "The framework and the SDK are both pinned",
+      "category": "build",
+      "severity": "recommended",
+      "why": "Without an SDK pin, the machine's newest installed SDK builds the project, and a newer SDK changes defaults. The failure appears on one build agent and not another.",
+      "action": "Declare the target framework in the project and pin the SDK version so every machine builds the same way.",
+      "verify": {
+        "cmd": "grep -rnE '<TargetFramework|\"version\"' --include='*.csproj' --include=global.json . 2>/dev/null | head -10",
+        "expect": "A target framework in the project, and a global.json pinning the SDK."
+      },
+      "references": [
+        "https://learn.microsoft.com/en-us/dotnet/core/tools/global-json"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "csharp.vulnerable-packages-reviewed",
+      "title": "Known vulnerabilities in packages have been reviewed",
+      "category": "security",
+      "severity": "high",
+      "why": "Transitive packages are where the vulnerable versions hide, and nothing in a normal build or test run fails when one is present.",
+      "action": "List vulnerable packages before a release, including transitive ones, and decide on each rather than deferring the whole list.",
+      "verify": {
+        "suggest": "dotnet list package --vulnerable --include-transitive",
+        "expect": "No unreviewed finding. Anything accepted is recorded with a reason."
+      },
+      "references": [
+        "https://learn.microsoft.com/en-us/nuget/concepts/auditing-packages"
+      ],
+      "added": "2026-08-22"
+    }
+  ]
+}
