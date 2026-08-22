@@ -1,0 +1,9 @@
+# deploylist — https://deploy-list.com
+#
+# The whole site is meant to be read, by people and by agents. Nothing here is
+# private and nothing is generated per visitor.
+
+User-agent: *
+Allow: /
+
+Sitemap: https://deploy-list.com/sitemap.xml

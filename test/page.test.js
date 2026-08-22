@@ -38,10 +38,75 @@ test('the page says it will not change anything, autopilot included', () => {
   assert.match(html, /autopilot/i);
 });
 
-test('the site ships no JavaScript', () => {
-  // The CSP denies scripts outright. A script tag here would be dead markup
-  // and a broken promise at the same time.
-  assert.ok(!/<script/i.test(read('index.html')));
+test('the only JavaScript is our own, and none of it is inline', () => {
+  const html = read('index.html');
+
+  // Every script must have a same-origin src. An inline script would need the
+  // CSP loosened to 'unsafe-inline', which is the loosening that actually
+  // matters, and a third-party src would put someone else's code on a page
+  // that tells people it sends nothing anywhere.
+  const tags = [...html.matchAll(/<script\b([^>]*)>/gi)].map((m) => m[1]);
+  for (const attrs of tags) {
+    const src = /\bsrc="([^"]+)"/.exec(attrs);
+    assert.ok(src, `inline script found: <script${attrs}>`);
+    assert.match(src[1], /^\/[^/]/, `script must be same-origin, got ${src[1]}`);
+  }
+  assert.ok(!/\bon[a-z]+=/i.test(html), 'no inline event handlers');
+  assert.ok(read('copy.js').length > 0, 'the script the page references must be published');
+});
+
+test('the policy allows exactly the two same-origin things the page needs', () => {
+  const headers = read('_headers');
+  const policy = /Content-Security-Policy: (.+)/.exec(headers)[1];
+  assert.match(policy, /default-src 'none'/);
+  assert.match(policy, /script-src 'self'/);
+  assert.match(policy, /style-src 'self'/);
+  assert.match(policy, /img-src 'self'/);
+  assert.ok(!policy.includes('unsafe-inline'), 'unsafe-inline defeats the point');
+  assert.ok(!policy.includes('unsafe-eval'));
+  assert.ok(!/https?:/.test(policy), 'no third-party origin belongs in this policy');
+});
+
+test('the page can be shared and indexed', () => {
+  const html = read('index.html');
+
+  // A social card that references an image the build does not publish is worse
+  // than no card at all: it fails silently, in someone else's timeline.
+  const og = /<meta property="og:image" content="https:\/\/deploy-list\.com\/([^"]+)">/.exec(html);
+  assert.ok(og, 'og:image is missing');
+  assert.ok(read(og[1]).length > 0, `og:image points at ${og[1]}, which is not published`);
+
+  assert.match(html, /<meta name="description" content="[^"]{80,300}">/);
+  assert.match(html, /<link rel="canonical" href="https:\/\/deploy-list\.com\/">/);
+  assert.match(html, /<meta name="twitter:card" content="summary_large_image">/);
+  assert.match(html, /<link rel="icon" href="\/favicon\.svg"/);
+  assert.ok(read('favicon.svg').length > 0);
+});
+
+test('the sitemap lists every published stack', () => {
+  const catalog = JSON.parse(read('index.json')).stacks;
+  const sitemap = read('sitemap.xml');
+  assert.match(sitemap, /<loc>https:\/\/deploy-list\.com\/<\/loc>/);
+  for (const stack of catalog) {
+    assert.ok(sitemap.includes(`/${stack.stem}.md</loc>`), `${stack.id} is missing from the sitemap`);
+  }
+});
+
+test('robots.txt points at the sitemap and blocks nothing', () => {
+  const robots = read('robots.txt');
+  assert.match(robots, /Sitemap: https:\/\/deploy-list\.com\/sitemap\.xml/);
+  assert.ok(!/^Disallow: \/$/m.test(robots), 'the whole site is meant to be read');
+});
+
+test('the copy buttons degrade instead of sitting there dead', () => {
+  const html = read('index.html');
+  const buttons = [...html.matchAll(/<button[^>]*data-copy="([^"]+)"[^>]*>/gi)];
+  assert.equal(buttons.length, 2, 'the link and the sentence both get one');
+
+  for (const [tag, payload] of buttons) {
+    assert.match(tag, /\bhidden\b/, 'a copy button must start hidden and be revealed by script');
+    assert.match(payload, /deploy-list\.com\/llms\.txt/);
+  }
 });
 
 test('every published stack is linked from the page', () => {

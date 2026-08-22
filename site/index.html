@@ -3,8 +3,31 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>deploylist — a pre-deployment checklist your coding agent can read</title>
-<meta name="description" content="Checklists of what should be true before software ships, published at stable URLs for coding agents. It reports. It never changes your project.">
+<title>deploylist — the pre-deployment checklist your coding agent reads</title>
+<meta name="description" content="AI can write an application in an afternoon, mistakes included. deploylist is what should be true before software goes live: one checklist per stack, at fixed URLs your agent can read. It reports; it never changes your project.">
+<link rel="canonical" href="https://deploy-list.com/">
+<meta name="robots" content="index, follow, max-image-preview:large">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="deploylist">
+<meta property="og:url" content="https://deploy-list.com/">
+<meta property="og:title" content="The checklist your agent reads before you ship">
+<meta property="og:description" content="AI writes applications in an afternoon, mistakes included. deploylist is what should be true before software goes live: one list per stack, read-only, reported to you.">
+<meta property="og:image" content="https://deploy-list.com/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="deploylist: the checklist your agent reads before you ship.">
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="The checklist your agent reads before you ship">
+<meta name="twitter:description" content="AI writes applications in an afternoon, mistakes included. deploylist is what should be true before software goes live.">
+<meta name="twitter:image" content="https://deploy-list.com/og.png">
+
+<meta name="theme-color" content="#fcfcfb" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#101012" media="(prefers-color-scheme: dark)">
+
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="alternate icon" href="/favicon.ico" sizes="32x32">
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
@@ -13,6 +36,7 @@
   <div class="wrap">
     <a class="wordmark" href="/">deploylist</a>
     <nav>
+      <a href="#why">Why</a>
       <a href="#use">How to use</a>
       <a href="#covered">Covered</a>
       <a href="#limits">Limits</a>
@@ -23,20 +47,59 @@
 
 <main>
 
+<div class="hero-band">
 <div class="wrap hero">
   <div class="column">
     <h1>The checklist your agent reads before you ship.</h1>
-    <p class="lede">Everything that should be true before software goes to
-    production, one list per stack, published as plain files at fixed URLs.</p>
+    <p class="lede">AI can write an entire application in an afternoon —
+    including the mistakes that used to take years of production incidents to
+    learn. These checklists make sure what should be true before your code goes
+    live actually is. One list per stack, published as plain files at fixed
+    URLs. It reports. It never changes your project.</p>
   </div>
 
   <div class="give-agent">
     <div class="label">Give your agent this link</div>
-    <p class="url"><a href="/llms.txt">https://deploy-list.com/llms.txt</a></p>
-    <p class="aside">Or just say it: <em>check this project against
-    https://deploy-list.com/llms.txt</em></p>
+    <div class="row">
+      <p class="url"><a href="/llms.txt">https://deploy-list.com/llms.txt</a></p>
+      <button type="button" class="copy" hidden
+              data-copy="https://deploy-list.com/llms.txt">Copy</button>
+    </div>
+    <div class="row aside">
+      <p>Or just say it: <em>check this project against
+      https://deploy-list.com/llms.txt</em></p>
+      <button type="button" class="copy" hidden
+              data-copy="Check this project against https://deploy-list.com/llms.txt">Copy</button>
+    </div>
   </div>
 </div>
+</div>
+
+<section id="why">
+  <div class="wrap column">
+    <h2>Why this exists</h2>
+    <p>Software is being shipped faster than it has ever been shipped — by more
+    people who have never shipped before.</p>
+    <p>Coding agents write whole applications in hours. Hobbyists push weekend
+    projects to the open internet. Startups take internal tools to production
+    with two people and no senior review. Companies hand their repos to AI and
+    let it run.</p>
+    <p>Speed like that skips the scar tissue. The lessons that used to cost a
+    decade of production incidents — .env files with real database credentials,
+    debug mode left on, default secrets, internal dashboards with no
+    authentication — are now being learned in public, on public GitHub,
+    reachable from anywhere on Earth.</p>
+    <p>The old answer was <em>get a senior engineer to review it</em>. But AI
+    multiplied the volume of code being shipped, not the number of senior
+    engineers. The bottleneck stopped being writing code. It is now judgment.</p>
+    <p>deploylist is what should be true before software goes to production,
+    written for the agents that write so much of it now. Give your agent one
+    link, it reads the checks for your stack, runs the read-only verification,
+    and hands you a report with a severity on every finding. It never applies a
+    fix, and it never touches your project. Its only job is to make sure you
+    know — before the internet does — what you are about to ship.</p>
+  </div>
+</section>
 
 <section id="use">
   <div class="wrap">
@@ -99,21 +162,45 @@
   <div class="wrap">
     <p class="eyebrow">Covered today</p>
     <ul class="stacks">
-      <li class="stack">
-        <a href="/javascript.md">JavaScript and TypeScript</a>
-        <span class="kids"><a href="/javascript/nextjs.md">Next.js</a></span>
+      <li class="stack js">
+        <svg class="mark js" viewBox="0 0 40 40" role="img" aria-hidden="true"><rect width="40" height="40" rx="9"/><text x="20" y="21">JS</text></svg>
+        <div class="body">
+          <h3><a href="/javascript.md">JavaScript and TypeScript</a></h3>
+          <ul class="pills">
+            <li><a href="/javascript.md">language</a></li>
+            <li><a href="/javascript/nextjs.md">Next.js</a></li>
+          </ul>
+        </div>
       </li>
-      <li class="stack">
-        <a href="/php.md">PHP</a>
-        <span class="kids"><a href="/php/laravel.md">Laravel</a>, <a href="/php/symfony.md">Symfony</a></span>
+      <li class="stack php">
+        <svg class="mark php" viewBox="0 0 40 40" role="img" aria-hidden="true"><rect width="40" height="40" rx="9"/><text x="20" y="21">php</text></svg>
+        <div class="body">
+          <h3><a href="/php.md">PHP</a></h3>
+          <ul class="pills">
+            <li><a href="/php.md">language</a></li>
+            <li><a href="/php/laravel.md">Laravel</a></li>
+            <li><a href="/php/symfony.md">Symfony</a></li>
+          </ul>
+        </div>
       </li>
-      <li class="stack">
-        <a href="/python.md">Python</a>
-        <span class="kids"><a href="/python/django.md">Django</a></span>
+      <li class="stack py">
+        <svg class="mark py" viewBox="0 0 40 40" role="img" aria-hidden="true"><rect width="40" height="40" rx="9"/><text x="20" y="21">Py</text></svg>
+        <div class="body">
+          <h3><a href="/python.md">Python</a></h3>
+          <ul class="pills">
+            <li><a href="/python.md">language</a></li>
+            <li><a href="/python/django.md">Django</a></li>
+          </ul>
+        </div>
       </li>
-      <li class="stack">
-        <a href="/go.md">Go</a>
-        <span class="kids">language layer</span>
+      <li class="stack go">
+        <svg class="mark go" viewBox="0 0 40 40" role="img" aria-hidden="true"><rect width="40" height="40" rx="9"/><text x="20" y="21">Go</text></svg>
+        <div class="body">
+          <h3><a href="/go.md">Go</a></h3>
+          <ul class="pills">
+            <li><a href="/go.md">language</a></li>
+          </ul>
+        </div>
       </li>
     </ul>
 
@@ -175,6 +262,8 @@
     <p>Built by <a href="https://ioritro.com">Oritro Ahmed</a>. © 2026 Oritro Ahmed.</p>
   </div>
 </footer>
+
+<script src="/copy.js"></script>
 
 </body>
 </html>
