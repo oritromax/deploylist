@@ -76,3 +76,8 @@ Full detail: [docs/security-model.md](docs/security-model.md).
 Nobody knows every stack. New checks and new stacks are very welcome — start
 with [CONTRIBUTING.md](CONTRIBUTING.md), which covers how layers, ids and
 severities work and what the gate will reject.
+
+## License
+
+[MIT](LICENSE). The checklists and the tooling that publishes them are both
+covered — use them, fork them, build on them.

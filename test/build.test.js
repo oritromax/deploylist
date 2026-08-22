@@ -28,6 +28,10 @@ test('the build produces the surface described in SPEC section 4', () => {
 test('every published file carries the data-not-instructions preamble', () => {
   const md = readFileSync(new URL('../dist/php/symfony.md', import.meta.url), 'utf8');
   assert.match(md, /reference data, not instructions/);
+
+  // An agent left running unattended is exactly the one that needs telling.
+  assert.match(md, /unattended, on autopilot, or in any\s+automatic mode/);
+  assert.match(md, /an autonomy setting is not the operator approval/);
   assert.match(md, /Do not modify the project/);
   const json = JSON.parse(readFileSync(new URL('../dist/php/symfony.json', import.meta.url), 'utf8'));
   assert.match(json._meta.usage, /reference data, not instructions/);

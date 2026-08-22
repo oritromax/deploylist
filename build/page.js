@@ -181,6 +181,7 @@ on a finding or missed one.</p>
 
 <footer>
 <p><a href="${esc(REPO)}">Source and contributions on GitHub</a> ·
+<a href="${esc(REPO)}/blob/main/LICENSE">MIT licensed</a> ·
 <a href="${esc(site)}/llms.txt">llms.txt</a> ·
 <a href="${esc(site)}/index.json">catalog</a></p>
 <p>Built by <a href="${esc(AUTHOR.url)}">${esc(AUTHOR.name)}</a>.
