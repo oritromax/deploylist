@@ -21,11 +21,19 @@ const SCHEMA_VERSION = 1;
 const CATEGORIES = ['security', 'secrets', 'config', 'performance', 'seo',
   'accessibility', 'observability', 'reliability', 'build', 'legal'];
 
-// Cloudflare Pages does not set CORS headers by default, and the whole product
-// is agents fetching these URLs, so a browser-context consumer needs this.
+// The host sets no CORS headers by default, and the whole product is agents
+// fetching these URLs, so a browser-context consumer needs the first line.
+//
+// The rest are the four headers universal.security-headers asks every site for,
+// kept here rather than in the CDN dashboard so they are version-controlled,
+// reviewable in a diff, and covered by CODEOWNERS. The site serves no HTML and
+// executes nothing, so the policy can deny everything without breaking a thing.
 const HEADERS = `/*
   Access-Control-Allow-Origin: *
   Cache-Control: public, max-age=600
+  Content-Security-Policy: default-src 'none'; frame-ancestors 'none'; base-uri 'none'
+  Referrer-Policy: no-referrer
+  Strict-Transport-Security: max-age=15552000; includeSubDomains
   X-Content-Type-Options: nosniff
 `;
 

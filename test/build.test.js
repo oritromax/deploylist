@@ -62,6 +62,13 @@ test('_headers is emitted for the host but never advertised as fetchable', () =>
   run('build/index.js');
   const headers = readFileSync(new URL('../dist/_headers', import.meta.url), 'utf8');
   assert.match(headers, /Access-Control-Allow-Origin: \*/);
+
+  // The four universal.security-headers names it in its action field. The site
+  // that publishes the check has no excuse for failing it.
+  for (const h of ['Content-Security-Policy', 'X-Content-Type-Options',
+    'Referrer-Policy', 'Strict-Transport-Security']) {
+    assert.ok(headers.includes(`${h}:`), `_headers is missing ${h}`);
+  }
   const manifest = JSON.parse(readFileSync(new URL('../dist/manifest.json', import.meta.url), 'utf8'));
   assert.ok(!('_headers' in manifest.files),
     'the host consumes _headers at deploy time and does not serve it, so hashing it would advertise a 404');
