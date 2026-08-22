@@ -1,0 +1,58 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+
+      # Schema, prose lint, command lint, references, structure, composition.
+      # This never executes a contributed verification command.
+      - name: Lint checks
+        run: npm run lint
+
+      - name: Test the gate itself
+        run: npm test
+
+      - name: Build the published surface
+        run: npm run build
+
+      # Network-dependent, so it runs separately and does not block on a flaky
+      # upstream during an unrelated change.
+      - name: Verify reference links resolve
+        run: node lint/index.js --check-links
+        continue-on-error: true
+
+  publish:
+    needs: gate
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+      - uses: actions/deploy-pages@v4

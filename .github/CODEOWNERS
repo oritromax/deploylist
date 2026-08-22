@@ -1,0 +1,21 @@
+# Paths that define or enforce the trust rules require a repository owner's
+# review, separate from any content review in the same pull request.
+#
+# Rationale: docs/security-model.md threat T6 — the natural attack is one pull
+# request that adds a payload and relaxes the rule that would have caught it.
+#
+# CODEOWNERS only takes effect once branch protection on the default branch has
+# "Require review from Code Owners" enabled; the file alone enforces nothing.
+
+/schema/                  @oritromax
+/lint/                    @oritromax
+/build/                   @oritromax
+/test/                    @oritromax
+/.github/                 @oritromax
+/CODEOWNERS               @oritromax
+/.github/CODEOWNERS       @oritromax
+/SPEC.md                  @oritromax
+/CONTRIBUTING.md          @oritromax
+/docs/security-model.md   @oritromax
+/package.json             @oritromax
+/package-lock.json        @oritromax
