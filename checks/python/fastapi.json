@@ -1,0 +1,126 @@
+{
+  "$schema": "../../schema/layer.schema.json",
+  "schema_version": 1,
+  "id": "python.fastapi",
+  "kind": "framework",
+  "name": "FastAPI",
+  "extends": [
+    "universal",
+    "python",
+    "web"
+  ],
+  "checks": [
+    {
+      "id": "python.fastapi.interactive-docs-restricted",
+      "title": "The interactive docs are not open to the internet",
+      "category": "security",
+      "severity": "high",
+      "why": "The generated schema lists every route, every parameter and every model, including the internal endpoints nobody meant to publish. It is a map of the application handed to whoever asks, and the docs page will call the endpoints for them.",
+      "action": "Disable the docs and schema URLs in production, or keep them behind the same authentication as the rest of the private surface. Decide deliberately rather than leaving the default.",
+      "verify": {
+        "cmd": "grep -rnE 'FastAPI\\(|docs_url|redoc_url|openapi_url' --include='*.py' . 2>/dev/null | head -10",
+        "expect": "The application sets docs_url, redoc_url and openapi_url to None in production, or the routes are protected."
+      },
+      "references": [
+        "https://fastapi.tiangolo.com/tutorial/metadata/"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "python.fastapi.no-reload-in-production",
+      "title": "The server is not started with reload enabled",
+      "category": "performance",
+      "severity": "high",
+      "why": "Reload watches the filesystem, forces a single worker and reloads on any file change, including one written by the application itself. It is a development convenience that quietly halves capacity and adds restarts nobody asked for.",
+      "action": "Remove reload from the production command. Use it in the development compose file only.",
+      "verify": {
+        "cmd": "grep -rnE 'reload=True|--reload|fastapi[\",[:space:]]+dev' --include=Dockerfile --include='*.sh' --include='*.yml' --include='*.yaml' --include='*.py' . 2>/dev/null | head -10",
+        "expect": "No hit on the path that starts the production process."
+      },
+      "references": [
+        "https://fastapi.tiangolo.com/deployment/concepts/"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "python.fastapi.debug-off",
+      "title": "Debug mode is off",
+      "category": "security",
+      "severity": "high",
+      "why": "With debug on, an unhandled exception returns the traceback to the caller. That names file paths, library versions and often the failing query, and it is served to anyone who can make the request fail.",
+      "action": "Leave debug off in production and return a generic error with a correlation id, logging the detail where only you can read it.",
+      "verify": {
+        "cmd": "grep -rnE 'debug[[:space:]]*=[[:space:]]*True|DEBUG[[:space:]]*=[[:space:]]*True' --include='*.py' . 2>/dev/null | head -10",
+        "expect": "Nothing outside development configuration."
+      },
+      "references": [
+        "https://fastapi.tiangolo.com/reference/fastapi/"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "python.fastapi.cors-origins-explicit",
+      "title": "CORS names the origins it allows",
+      "category": "security",
+      "severity": "high",
+      "why": "A wildcard origin lets any site on the internet call the API from a visitor's browser. Combined with cookie credentials it is worse still, and the combination is a common copy-paste from a tutorial.",
+      "action": "List the origins that are actually allowed. If credentials are permitted, a wildcard is not an option at all.",
+      "verify": {
+        "cmd": "grep -rnE -A4 'CORSMiddleware' --include='*.py' . 2>/dev/null | head -20",
+        "expect": "allow_origins names specific origins. A wildcard, especially alongside allow_credentials, is the finding."
+      },
+      "references": [
+        "https://fastapi.tiangolo.com/tutorial/cors/"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "python.fastapi.proxy-headers-handled",
+      "title": "Forwarded headers are handled when running behind a proxy",
+      "category": "reliability",
+      "severity": "recommended",
+      "why": "Without them every client looks like the proxy, so rate limiting and audit logs are useless, and generated absolute URLs come out as http against an https site, which breaks redirects and links.",
+      "action": "Enable proxy header handling and restrict it to the addresses your proxy actually uses, so a client cannot spoof its own forwarded address.",
+      "verify": {
+        "cmd": "grep -rnE 'proxy-headers|proxy_headers|forwarded-allow-ips|forwarded_allow_ips' --include=Dockerfile --include='*.sh' --include='*.yml' --include='*.yaml' --include='*.py' . 2>/dev/null | head -10",
+        "expect": "Enabled, with the trusted proxy addresses named rather than left open."
+      },
+      "references": [
+        "https://fastapi.tiangolo.com/deployment/concepts/"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "python.fastapi.worker-count-deliberate",
+      "title": "The number of workers is a decision, not a default",
+      "category": "performance",
+      "severity": "recommended",
+      "why": "One worker serves one request at a time for anything that blocks, so a single slow dependency stalls the whole service. Too many, and each one holds its own connection pool and memory until the database runs out of connections.",
+      "action": "Set the worker count against the CPU allowance and the database connection limit, and write down which of the two you sized against.",
+      "verify": {
+        "cmd": "grep -rnE 'workers|WEB_CONCURRENCY|gunicorn' --include=Dockerfile --include='*.sh' --include='*.yml' --include='*.yaml' . 2>/dev/null | head -10",
+        "expect": "A worker count is set explicitly somewhere on the production start path."
+      },
+      "references": [
+        "https://fastapi.tiangolo.com/deployment/server-workers/"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "python.fastapi.production-server-not-dev-command",
+      "title": "The application is served by a production server, not the development command",
+      "category": "reliability",
+      "severity": "high",
+      "why": "The development command is built for one developer on one machine. It reloads, it does not manage workers, and it makes no promises about behaviour under load or on failure.",
+      "action": "Start the application with the production command or with a process manager running an ASGI worker class, and keep the development command out of images and deploy scripts.",
+      "verify": {
+        "cmd": "grep -rnE 'fastapi[\",[:space:]]+dev|uvicorn.run|python[\",[:space:]]+(main|app)\\.py' --include=Dockerfile --include='*.sh' --include='*.yml' --include='*.yaml' . 2>/dev/null | head -10",
+        "expect": "The production entry point is a production server invocation, not the development command or a direct script run."
+      },
+      "references": [
+        "https://fastapi.tiangolo.com/deployment/manually/"
+      ],
+      "added": "2026-08-22"
+    }
+  ]
+}
