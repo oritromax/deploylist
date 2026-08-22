@@ -25,6 +25,8 @@
     "docs.spring.io",
     "docs.oracle.com",
     "fastapi.tiangolo.com",
-    "learn.microsoft.com"
+    "learn.microsoft.com",
+    "gin-gonic.com",
+    "pkg.go.dev"
   ]
 }
