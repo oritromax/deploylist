@@ -30,6 +30,7 @@
     "pkg.go.dev",
     "flask.palletsprojects.com",
     "angular.dev",
-    "pubs.opengroup.org"
+    "pubs.opengroup.org",
+    "echo.labstack.com"
   ]
 }

@@ -1,0 +1,94 @@
+{
+  "$schema": "../../schema/layer.schema.json",
+  "schema_version": 1,
+  "id": "go.echo",
+  "kind": "framework",
+  "name": "Echo",
+  "extends": [
+    "universal",
+    "go",
+    "web"
+  ],
+  "checks": [
+    {
+      "id": "go.echo.recover-middleware-present",
+      "title": "A panic in a handler cannot take the process down",
+      "category": "reliability",
+      "severity": "critical",
+      "why": "A new instance comes with no middleware at all, so an unrecovered panic in one handler ends the whole process rather than the one request. Every connected client loses their connection because of a single malformed input.",
+      "action": "Register the recover middleware on every instance, and confirm it logs the panic and the stack somewhere you will see, rather than swallowing it silently.",
+      "verify": {
+        "cmd": "grep -rnE 'middleware.Recover|echo.New\\(\\)' --include='*.go' . 2>/dev/null | head -10",
+        "expect": "Recover middleware is registered on each instance created. An instance without it is the finding."
+      },
+      "references": [
+        "https://echo.labstack.com/docs/middleware/recover"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "go.echo.server-timeouts-set",
+      "title": "The HTTP server has read and write timeouts",
+      "category": "reliability",
+      "severity": "high",
+      "why": "The convenience start method runs a server with no timeouts, so a client that opens a connection and dribbles a byte at a time holds a goroutine and a descriptor for as long as it likes. Enough of them and the service stops accepting connections while looking idle.",
+      "action": "Set read, write and idle timeouts on the server before starting it, and pick values from how long your slowest legitimate request actually takes.",
+      "verify": {
+        "cmd": "grep -rnE 'ReadTimeout|WriteTimeout|IdleTimeout|ReadHeaderTimeout|e.Start\\(' --include='*.go' . 2>/dev/null | head -10",
+        "expect": "Timeouts are set on the server. Only a Start call, with no timeouts anywhere, is the finding."
+      },
+      "references": [
+        "https://pkg.go.dev/net/http"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "go.echo.debug-mode-off",
+      "title": "Debug mode is off",
+      "category": "security",
+      "severity": "high",
+      "why": "With debug on, the default error handler puts the internal error message into the response body, so a failing query or a file path is returned to whoever triggered it. It is switched on to diagnose a deployment and left on afterwards.",
+      "action": "Leave debug off in production and return a generic body with a correlation id, logging the detail where only you can read it.",
+      "verify": {
+        "cmd": "grep -rnE '\\.Debug[[:space:]]*=|SetDebug' --include='*.go' . 2>/dev/null | head -10",
+        "expect": "Debug is false or never set in the production path."
+      },
+      "references": [
+        "https://echo.labstack.com/docs"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "go.echo.client-ip-extraction-trusted",
+      "title": "Client address extraction matches what is actually in front",
+      "category": "security",
+      "severity": "high",
+      "why": "Reading the forwarded header without naming which proxies to trust lets any caller claim any address, so rate limits, audit logs and address rules follow whatever the client asserts. Reading the direct address behind a proxy is the opposite error and records the proxy for everyone.",
+      "action": "Choose the extractor that matches your deployment and give it the trust ranges of the proxies you actually run, rather than accepting either default unexamined.",
+      "verify": {
+        "cmd": "grep -rnE 'IPExtractor|ExtractIPFromXFFHeader|ExtractIPDirect|TrustLinkLocal|TrustPrivateNet' --include='*.go' . 2>/dev/null | head -10",
+        "expect": "An extractor is chosen deliberately, with trust options where a forwarded header is used."
+      },
+      "references": [
+        "https://echo.labstack.com/docs/ip-address"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "go.echo.request-body-bounded",
+      "title": "Request bodies are bounded",
+      "category": "reliability",
+      "severity": "recommended",
+      "why": "Without a limit a request body is read until it ends or the process runs out of memory, and starting several large uploads at once costs an attacker almost nothing.",
+      "action": "Register the body limit middleware with a size your endpoints actually need, and cap the body at the proxy as well so the request is rejected before it reaches the application.",
+      "verify": {
+        "cmd": "grep -rnE 'middleware.BodyLimit|client_max_body_size|MaxBytesReader' --include='*.go' --include='*.conf' --include='*.yml' --include='*.yaml' . 2>/dev/null | head -10",
+        "expect": "A limit exists in the application or at the proxy in front of it."
+      },
+      "references": [
+        "https://echo.labstack.com/docs/middleware/body-limit"
+      ],
+      "added": "2026-08-22"
+    }
+  ]
+}
