@@ -23,6 +23,7 @@
     "go.dev",
     "developer.hashicorp.com",
     "docs.spring.io",
-    "docs.oracle.com"
+    "docs.oracle.com",
+    "fastapi.tiangolo.com"
   ]
 }
