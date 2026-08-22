@@ -17,5 +17,6 @@
 /SPEC.md                  @oritromax
 /CONTRIBUTING.md          @oritromax
 /docs/security-model.md   @oritromax
+/wrangler.jsonc           @oritromax
 /package.json             @oritromax
 /package-lock.json        @oritromax

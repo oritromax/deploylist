@@ -17,6 +17,9 @@ SPEC.md
 .env.*
 !.env.example
 
+# Wrangler's local state
+.wrangler/
+
 # Logs and editor noise
 *.log
 npm-debug.log*

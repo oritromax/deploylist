@@ -1,0 +1,15 @@
+{
+  // Cloudflare builds `npm run build` from main and deploys the result with
+  // `npx wrangler deploy`. Without this file wrangler finds no Worker
+  // entrypoint and no assets directory, and refuses.
+  //
+  // There is no `main`: this is an assets-only Worker. Nothing executes on the
+  // edge, which keeps the published surface exactly as static as the security
+  // model claims it is.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "deploylist",
+  "compatibility_date": "2026-08-22",
+  "assets": {
+    "directory": "./dist"
+  }
+}
