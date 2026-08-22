@@ -29,6 +29,7 @@
     "gin-gonic.com",
     "pkg.go.dev",
     "flask.palletsprojects.com",
-    "angular.dev"
+    "angular.dev",
+    "pubs.opengroup.org"
   ]
 }
