@@ -1,0 +1,273 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://deploy-list.com/schema/layer.schema.json",
+  "title": "deploylist layer",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "id",
+    "kind",
+    "name",
+    "checks"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Editor hint; points at this schema."
+    },
+    "$comment": {
+      "type": "string",
+      "maxLength": 300
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^(universal|[a-z0-9-]+(\\.[a-z0-9-]+)?)$",
+      "description": "universal | <lang> | <lang>.<framework>. Must match the file path."
+    },
+    "kind": {
+      "enum": [
+        "universal",
+        "language",
+        "framework",
+        "runtime"
+      ]
+    },
+    "name": {
+      "$ref": "#/$defs/prose",
+      "maxLength": 60
+    },
+    "extends": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^(universal|[a-z0-9-]+(\\.[a-z0-9-]+)?)$"
+      },
+      "uniqueItems": true,
+      "description": "Full chain, listed explicitly. universal must come first when present."
+    },
+    "suppressions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "reason"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/$defs/checkId"
+          },
+          "reason": {
+            "$ref": "#/$defs/prose",
+            "minLength": 20,
+            "maxLength": 300
+          }
+        }
+      }
+    },
+    "checks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/check"
+      }
+    }
+  },
+  "$defs": {
+    "prose": {
+      "type": "string",
+      "minLength": 1,
+      "not": {
+        "pattern": "https?://|<[a-zA-Z/]|<!--|`|\\]\\(|data:|base64,|[\\u200B-\\u200F\\u2028-\\u202E\\u2060-\\u2064\\u2066-\\u2069\\uFEFF]"
+      },
+      "description": "Plain text only. No markup, no URLs, no invisible or bidi characters. Additional lint in docs/security-model.md §3."
+    },
+    "checkId": {
+      "type": "string",
+      "pattern": "^(universal|[a-z0-9-]+(\\.[a-z0-9-]+)?)\\.[a-z0-9]+(-[a-z0-9]+)*$"
+    },
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "category",
+        "severity",
+        "why",
+        "action"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/checkId"
+        },
+        "title": {
+          "$ref": "#/$defs/prose",
+          "maxLength": 100
+        },
+        "category": {
+          "enum": [
+            "security",
+            "secrets",
+            "config",
+            "performance",
+            "seo",
+            "accessibility",
+            "observability",
+            "reliability",
+            "build",
+            "legal"
+          ]
+        },
+        "severity": {
+          "enum": [
+            "critical",
+            "high",
+            "recommended",
+            "optional"
+          ]
+        },
+        "subjective": {
+          "type": "boolean",
+          "default": false
+        },
+        "why": {
+          "$ref": "#/$defs/prose",
+          "maxLength": 300
+        },
+        "action": {
+          "$ref": "#/$defs/prose",
+          "maxLength": 300
+        },
+        "verify": {
+          "$ref": "#/$defs/verify"
+        },
+        "references": {
+          "type": "array",
+          "maxItems": 4,
+          "items": {
+            "type": "string",
+            "format": "uri",
+            "pattern": "^https://",
+            "description": "Domain must appear in schema/reference-domains.json."
+          }
+        },
+        "applies_to": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "versions": {
+              "type": "string",
+              "maxLength": 40
+            }
+          },
+          "description": "Reserved. Stored and displayed; no resolution logic in v1."
+        },
+        "added": {
+          "type": "string",
+          "format": "date",
+          "description": "Stamped by CI at merge."
+        }
+      },
+      "allOf": [
+        {
+          "description": "Subjective checks must sit at the bottom of the severity ladder.",
+          "if": {
+            "required": [
+              "subjective"
+            ],
+            "properties": {
+              "subjective": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "severity": {
+                "const": "optional"
+              }
+            }
+          }
+        },
+        {
+          "description": "Objective checks must be falsifiable: verify is required.",
+          "if": {
+            "anyOf": [
+              {
+                "not": {
+                  "required": [
+                    "subjective"
+                  ]
+                }
+              },
+              {
+                "required": [
+                  "subjective"
+                ],
+                "properties": {
+                  "subjective": {
+                    "const": false
+                  }
+                }
+              }
+            ]
+          },
+          "then": {
+            "required": [
+              "verify"
+            ]
+          }
+        }
+      ]
+    },
+    "verify": {
+      "type": "object",
+      "additionalProperties": false,
+      "oneOf": [
+        {
+          "required": [
+            "cmd",
+            "expect"
+          ]
+        },
+        {
+          "required": [
+            "suggest",
+            "expect"
+          ]
+        },
+        {
+          "required": [
+            "manual"
+          ]
+        }
+      ],
+      "properties": {
+        "cmd": {
+          "type": "string",
+          "maxLength": 300,
+          "description": "Read-only shell command. Allowlist and denylist in docs/security-model.md §4."
+        },
+        "suggest": {
+          "type": "string",
+          "maxLength": 300,
+          "description": "A command offered to the human operator, never run by the agent. Used when only a framework CLI can settle the check. Denylist and read-only intent still apply; see docs/security-model.md section 4.5."
+        },
+        "expect": {
+          "$ref": "#/$defs/prose",
+          "maxLength": 200
+        },
+        "manual": {
+          "$ref": "#/$defs/prose",
+          "maxLength": 300
+        }
+      }
+    }
+  }
+}

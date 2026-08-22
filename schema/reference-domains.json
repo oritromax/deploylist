@@ -1,0 +1,24 @@
+{
+  "$comment": "Allowlisted domains for check references. Adding an entry requires CODEOWNERS review. URL shorteners and redirectors are permanently banned. See docs/security-model.md \u00a75.",
+  "domains": [
+    "developer.mozilla.org",
+    "web.dev",
+    "owasp.org",
+    "cheatsheetseries.owasp.org",
+    "rfc-editor.org",
+    "www.w3.org",
+    "datatracker.ietf.org",
+    "symfony.com",
+    "laravel.com",
+    "nextjs.org",
+    "vercel.com",
+    "react.dev",
+    "vuejs.org",
+    "docs.djangoproject.com",
+    "docs.python.org",
+    "www.php.net",
+    "nodejs.org",
+    "expressjs.com",
+    "docs.npmjs.com"
+  ]
+}
