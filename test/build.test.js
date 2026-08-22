@@ -49,14 +49,23 @@ test('the published stack file is the composed chain, with suppressions applied'
   assert.equal(new Set(ids).size, ids.length, 'no duplicates after flattening');
 });
 
-test('a language layer is not assumed to be a website', () => {
-  // PHP is usually web, but a PHP CLI tool is still PHP. Web checks reach a
-  // stack only through the web surface, which frameworks opt into. Getting
-  // this wrong tells a command-line tool it needs a favicon.
-  const lang = JSON.parse(readFileSync(new URL('../dist/php.json', import.meta.url), 'utf8'));
-  const ids = lang.checks.map((c) => c.id);
-  assert.ok(!ids.some((id) => id.startsWith('web.')),
-    `the php language layer inherited web checks: ${ids.filter((i) => i.startsWith('web.'))}`);
+test('no language layer is assumed to be a website', () => {
+  // PHP is usually web, but a PHP CLI tool is still PHP, and Go is mostly not
+  // web at all. Web checks reach a stack only through the web surface, which
+  // frameworks opt into. Getting this wrong tells a command-line tool it needs
+  // a favicon, which is how a checklist loses a reader for good.
+  const catalog = JSON.parse(readFileSync(new URL('../dist/index.json', import.meta.url), 'utf8'));
+  const languages = catalog.stacks.filter((s) => s.kind === 'language');
+  assert.ok(languages.length >= 4, 'expected several language layers to check');
+
+  for (const lang of languages) {
+    const published = JSON.parse(readFileSync(new URL(`../dist/${lang.stem}.json`, import.meta.url), 'utf8'));
+    const web = published.checks.map((c) => c.id).filter((id) => id.startsWith('web.'));
+    assert.deepEqual(web, [], `the ${lang.id} language layer inherited web checks`);
+  }
+
+  const php = JSON.parse(readFileSync(new URL('../dist/php.json', import.meta.url), 'utf8'));
+  const ids = php.checks.map((c) => c.id);
   assert.ok(ids.includes('php.opcache-enabled'), 'still has its own checks');
   assert.ok(ids.includes('universal.gitignore-env'), 'still inherits universal');
 });

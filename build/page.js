@@ -8,7 +8,7 @@ const esc = (s) => String(s)
 // Intent, not commitment. Kept here so the page and any future announcement
 // read from one list.
 export const PLANNED = [
-  'Go', 'Rust', 'Java', 'Zig', 'Flutter',
+  'Rust', 'Java', 'Zig', 'Flutter',
 ];
 
 const AUTHOR = { name: 'Oritro Ahmed', url: 'https://ioritro.com' };

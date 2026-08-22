@@ -1,0 +1,138 @@
+{
+  "$schema": "../../schema/layer.schema.json",
+  "schema_version": 1,
+  "id": "go",
+  "kind": "language",
+  "name": "Go",
+  "extends": [
+    "universal"
+  ],
+  "checks": [
+    {
+      "id": "go.modules-committed",
+      "title": "go.mod and go.sum are both committed",
+      "category": "build",
+      "severity": "high",
+      "why": "Without go.sum in version control the build trusts whatever the module proxy returns that day, so a dependency can change under you between two builds of the same commit.",
+      "action": "Commit go.mod and go.sum together. Never add go.sum to gitignore, and never regenerate it as part of the deploy.",
+      "verify": {
+        "cmd": "git ls-files go.mod go.sum",
+        "expect": "Both files are listed. If go.sum is missing the build has no checksum to verify against."
+      },
+      "references": [
+        "https://go.dev/ref/mod"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "go.toolchain-pinned",
+      "title": "The Go version is pinned, not whatever the machine has",
+      "category": "build",
+      "severity": "recommended",
+      "why": "A build that takes the toolchain it happens to find changes compiler behaviour and standard library patches between deploys, which turns a bug into one that only appears on one machine.",
+      "action": "Name a version in the go directive, and build with that same version in CI and in the release image.",
+      "verify": {
+        "cmd": "grep -E '^(go|toolchain) ' go.mod 2>/dev/null",
+        "expect": "A go directive names an explicit version, and the build environment uses the same one."
+      },
+      "references": [
+        "https://go.dev/doc/toolchain"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "go.vulncheck-clean",
+      "title": "Known vulnerabilities in dependencies have been reviewed",
+      "category": "security",
+      "severity": "high",
+      "why": "The module graph of a normal service pulls in dozens of packages, and a known vulnerable version can sit there for months without anything failing.",
+      "action": "Run the vulnerability scanner before a release and decide on each finding. It reports only vulnerabilities in code paths your program actually reaches, so the list is usually short.",
+      "verify": {
+        "suggest": "govulncheck ./...",
+        "expect": "No unreviewed finding. Each one is either fixed by an upgrade or recorded with a reason it does not apply."
+      },
+      "references": [
+        "https://go.dev/security/vuln/"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "go.trimpath-set",
+      "title": "Release binaries are built with trimpath",
+      "category": "security",
+      "severity": "recommended",
+      "why": "Without it the binary embeds the absolute path of every source file, which hands out the build machine layout, the CI directory structure and often a username.",
+      "action": "Pass trimpath to the release build so recorded paths become module paths instead of local ones. It also makes the build reproducible across machines.",
+      "verify": {
+        "cmd": "grep -rn -- '-trimpath' --include=Makefile --include=Dockerfile --include='*.yml' --include='*.yaml' . 2>/dev/null | head -5",
+        "expect": "The release build path passes trimpath. A local development build does not need it."
+      },
+      "references": [
+        "https://go.dev/cmd/go/"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "go.race-detector-not-shipped",
+      "title": "The shipped binary was not built with the race detector",
+      "category": "performance",
+      "severity": "high",
+      "why": "A race build runs several times slower and uses far more memory. It is easy to leave the flag in a Makefile target that both the test job and the release job call.",
+      "action": "Keep the race flag on the test target only. Check that the release target, the container build and any goreleaser configuration do not inherit it.",
+      "verify": {
+        "cmd": "grep -rn -- '-race' --include=Makefile --include=Dockerfile --include='*.yml' --include='*.yaml' . 2>/dev/null | head -10",
+        "expect": "Every hit belongs to a test or CI job, and none is on the path that produces the artifact you deploy."
+      },
+      "references": [
+        "https://go.dev/doc/articles/race_detector"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "go.gomaxprocs-matches-cpu-limit",
+      "title": "GOMAXPROCS reflects the container CPU limit",
+      "category": "performance",
+      "severity": "recommended",
+      "why": "In a container with a CPU quota the runtime still sees every core on the host, so it runs far more scheduler threads than the quota allows and the program spends its time being throttled.",
+      "action": "Set GOMAXPROCS from the quota in the deployment, or have the program read the cgroup limit at startup and set it.",
+      "verify": {
+        "manual": "Look at the deployment for a CPU limit. If one is set, confirm that either the environment sets GOMAXPROCS to match or the program adjusts it at startup."
+      },
+      "references": [
+        "https://go.dev/doc/godebug"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "go.build-version-stamped",
+      "title": "The binary can say which commit it came from",
+      "category": "observability",
+      "severity": "recommended",
+      "why": "When something misbehaves in production, the first question is which build is running. An unstamped binary cannot answer it, and the deploy log is not always trustworthy by then.",
+      "action": "Stamp the commit and version at build time, either through the module build information Go records automatically or through linker flags, and expose it in a startup log line or a version flag.",
+      "verify": {
+        "suggest": "go version -m ./path/to/your-binary",
+        "expect": "The output names a version and a revision rather than devel or an empty value."
+      },
+      "references": [
+        "https://go.dev/ref/mod"
+      ],
+      "added": "2026-08-22"
+    },
+    {
+      "id": "go.cgo-matches-base-image",
+      "title": "The cgo setting matches the image the binary runs in",
+      "category": "build",
+      "severity": "recommended",
+      "why": "With cgo on, the binary links against the host C library. Copied into a scratch or distroless image it fails at startup with a missing loader, and the error names a file rather than the cause.",
+      "action": "Build with cgo disabled for a static binary, or use a base image that carries the C library the binary was linked against. Decide which, rather than inheriting the default.",
+      "verify": {
+        "manual": "Check the base image in the Dockerfile against the cgo setting used for the build. A scratch or distroless image needs a static binary."
+      },
+      "references": [
+        "https://go.dev/wiki/cgo"
+      ],
+      "added": "2026-08-22"
+    }
+  ]
+}
