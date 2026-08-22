@@ -3,7 +3,7 @@
   "schema_version": 1,
   "id": "universal",
   "kind": "universal",
-  "name": "Any web project",
+  "name": "Any software project",
   "checks": [
     {
       "id": "universal.gitignore-env",

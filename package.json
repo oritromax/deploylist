@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Pre-deployment checklists for web projects, one per stack.",
+  "description": "Pre-deployment checklists for software projects, one per stack.",
   "scripts": {
     "lint": "node lint/index.js",
     "build": "node build/index.js",
