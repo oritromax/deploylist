@@ -1,3 +1,6 @@
+# Publishing lives in Cloudflare Pages, which builds `npm run build` from main
+# and serves dist/. This workflow is the gate, not the deploy: it decides
+# whether a change is fit to reach main in the first place.
 name: ci
 
 on:
@@ -35,24 +38,3 @@ jobs:
       - name: Verify reference links resolve
         run: node lint/index.js --check-links
         continue-on-error: true
-
-  publish:
-    needs: gate
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-      - run: npm ci
-      - run: npm run build
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: dist
-      - uses: actions/deploy-pages@v4
