@@ -6,7 +6,8 @@
   "name": "Django",
   "extends": [
     "universal",
-    "python"
+    "python",
+    "web"
   ],
   "checks": [
     {

@@ -6,7 +6,8 @@
   "name": "Symfony",
   "extends": [
     "universal",
-    "php"
+    "php",
+    "web"
   ],
   "suppressions": [
     {

@@ -72,6 +72,7 @@ export function renderIndexHtml({ site, catalog, generated }) {
   const languages = catalog.filter((c) => c.kind === 'language');
   const frameworks = catalog.filter((c) => c.kind === 'framework');
   const universal = catalog.find((c) => c.kind === 'universal');
+  const surfaces = catalog.filter((c) => c.kind === 'surface');
 
   // Counts are never summed across rows: a composed list already contains
   // everything it inherits, so adding a language to its framework would count
@@ -152,6 +153,13 @@ language checks and ${universal ? `the ${universal.count} ` : ''}<a href="${esc(
 checks</a> that apply whatever the project is written in, which is why the
 numbers above do not add up. The always-current catalog is
 <a href="${esc(site)}/index.json">index.json</a>.</p>
+${surfaces.length ? `<p>Some checks follow from what a project <em>is</em> rather than what it is
+written in. Those live in their own layer, inherited only by the stacks they
+apply to — a command-line tool has no favicon and should not be told it needs
+one.</p>
+<ul>
+${surfaces.map((s) => `  <li><a href="${esc(site)}/${esc(s.stem)}.md">${esc(s.title)}</a> — ${s.count} checks</li>`).join('\n')}
+</ul>` : ''}
 
 <h2>Planned</h2>
 <p>Wanted, not yet written:</p>

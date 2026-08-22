@@ -5,7 +5,7 @@
 // text overrides by design, so every resolved check is byte-identical to the
 // check as it was reviewed in the layer that authored it.
 
-import { idToPath } from './paths.js';
+import { idToPath, SURFACES } from './paths.js';
 
 const KIND_DEPTH = { universal: 0, language: 1, framework: 2, runtime: 2 };
 
@@ -15,7 +15,8 @@ const KIND_DEPTH = { universal: 0, language: 1, framework: 2, runtime: 2 };
 // root catalog. These slugs are reserved at every level.
 const CATEGORIES = ['security', 'secrets', 'config', 'performance', 'seo',
   'accessibility', 'observability', 'reliability', 'build', 'legal'];
-const RESERVED_SLUGS = new Set([...CATEGORIES, 'index', 'critical', 'manifest', 'universal', 'llms']);
+const RESERVED_SLUGS = new Set([...CATEGORIES, ...SURFACES,
+  'index', 'critical', 'manifest', 'universal', 'llms']);
 
 /**
  * Structural checks that the JSON Schema cannot express.
@@ -37,7 +38,14 @@ export function lintStructure(entries) {
     const idParts = layer.id === 'universal' ? 0 : layer.id.split('.').length;
     if (layer.kind === 'universal' && layer.id !== 'universal') {
       errors.push(at('kind universal is only valid for the layer with id universal'));
-    } else if (depth !== undefined && layer.id !== 'universal' && idParts !== depth) {
+    } else if (layer.kind === 'surface' && !SURFACES.has(layer.id)) {
+      errors.push(at(
+        `kind surface is only valid for a declared surface (${[...SURFACES].join(', ')}). ` +
+        `Adding one changes where every stack inherits from, so it is a change to lint/paths.js.`));
+    } else if (SURFACES.has(layer.id) && layer.kind !== 'surface') {
+      errors.push(at(`${layer.id} is a surface, so it cannot also be a ${layer.kind} layer`));
+    } else if (depth !== undefined && layer.id !== 'universal' && !SURFACES.has(layer.id)
+               && idParts !== depth) {
       errors.push(at(`kind ${layer.kind} expects an id with ${depth} segment(s), got ${layer.id}`));
     }
 
@@ -54,7 +62,8 @@ export function lintStructure(entries) {
       seen.add(check.id);
     }
 
-    const slug = layer.id === 'universal' ? null : layer.id.split('.').pop();
+    const slug = (layer.id === 'universal' || SURFACES.has(layer.id))
+      ? null : layer.id.split('.').pop();
     if (slug && RESERVED_SLUGS.has(slug)) {
       errors.push(at(
         `slug ${JSON.stringify(slug)} is reserved: the published surface emits ` +

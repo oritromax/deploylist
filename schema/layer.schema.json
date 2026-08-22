@@ -31,6 +31,7 @@
     "kind": {
       "enum": [
         "universal",
+        "surface",
         "language",
         "framework",
         "runtime"
@@ -85,7 +86,7 @@
       "not": {
         "pattern": "https?://|<[a-zA-Z/]|<!--|`|\\]\\(|data:|base64,|[\\u200B-\\u200F\\u2028-\\u202E\\u2060-\\u2064\\u2066-\\u2069\\uFEFF]"
       },
-      "description": "Plain text only. No markup, no URLs, no invisible or bidi characters. Additional lint in docs/security-model.md §3."
+      "description": "Plain text only. No markup, no URLs, no invisible or bidi characters. Additional lint in docs/security-model.md \u00a73."
     },
     "checkId": {
       "type": "string",
@@ -252,7 +253,7 @@
         "cmd": {
           "type": "string",
           "maxLength": 300,
-          "description": "Read-only shell command. Allowlist and denylist in docs/security-model.md §4."
+          "description": "Read-only shell command. Allowlist and denylist in docs/security-model.md \u00a74."
         },
         "suggest": {
           "type": "string",

@@ -36,12 +36,25 @@ test('every published file carries the data-not-instructions preamble', () => {
 test('the published stack file is the composed chain, with suppressions applied', () => {
   const json = JSON.parse(readFileSync(new URL('../dist/php/symfony.json', import.meta.url), 'utf8'));
   const ids = json.checks.map((c) => c.id);
-  assert.deepEqual(json._meta.layers, ['universal', 'php', 'php.symfony']);
-  assert.ok(ids.includes('universal.favicon-present'), 'inherits from universal');
+  assert.deepEqual(json._meta.layers, ['universal', 'php', 'web', 'php.symfony']);
+  assert.ok(ids.includes('universal.license-declared'), 'inherits from universal');
+  assert.ok(ids.includes('web.favicon-present'), 'inherits from the web surface');
   assert.ok(ids.includes('php.opcache-enabled'), 'inherits from the language layer');
   assert.ok(ids.includes('php.symfony.app-debug-off'), 'includes its own checks');
   assert.ok(!ids.includes('universal.gitignore-env'), 'suppression was applied');
   assert.equal(new Set(ids).size, ids.length, 'no duplicates after flattening');
+});
+
+test('a language layer is not assumed to be a website', () => {
+  // PHP is usually web, but a PHP CLI tool is still PHP. Web checks reach a
+  // stack only through the web surface, which frameworks opt into. Getting
+  // this wrong tells a command-line tool it needs a favicon.
+  const lang = JSON.parse(readFileSync(new URL('../dist/php.json', import.meta.url), 'utf8'));
+  const ids = lang.checks.map((c) => c.id);
+  assert.ok(!ids.some((id) => id.startsWith('web.')),
+    `the php language layer inherited web checks: ${ids.filter((i) => i.startsWith('web.'))}`);
+  assert.ok(ids.includes('php.opcache-enabled'), 'still has its own checks');
+  assert.ok(ids.includes('universal.gitignore-env'), 'still inherits universal');
 });
 
 test('internal composition bookkeeping does not leak into published output', () => {
