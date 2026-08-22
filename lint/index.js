@@ -2,7 +2,7 @@
 // deploylist lint — the CI gate described in CONTRIBUTING.md.
 //
 //   node lint/index.js                 schema, prose, commands, references, structure
-//   node lint/index.js --check-links   additionally verify every reference returns 200
+//   node lint/index.js --check-links   additionally verify every reference resolves
 //   node lint/index.js --stamp         write `added` on merged checks that lack it
 //
 // This never executes a contributed command. It validates shape only.
@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url';
 import { lintSchema } from './schema.js';
 import { lintProse } from './prose.js';
 import { lintCommand, lintSuggestedCommand } from './command.js';
-import { lintReference, checkReachable } from './references.js';
+import { lintReference, checkAllReachable } from './references.js';
 import { lintStructure, resolve } from './compose.js';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
@@ -122,9 +122,11 @@ async function main() {
         }
       }
     }
-    const results = await Promise.all(
-      [...seen].map(([url, where]) => checkReachable(url, `${where} ${url}`)));
-    allErrors.push(...results.flat());
+    const { dead, skipped } = await checkAllReachable([...seen]);
+    // A host that rate-limited us has told us nothing about the link, so it is
+    // a warning. Only rot is an error.
+    allErrors.push(...dead);
+    allWarnings.push(...skipped);
   }
 
   if (args.includes('--stamp')) {

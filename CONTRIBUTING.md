@@ -92,7 +92,8 @@ npm run build    # emit dist/, refuses input that does not lint
 npm run check    # all three
 ```
 
-`npm run lint -- --check-links` additionally verifies every reference resolves.
+`npm run lint -- --check-links` additionally fetches every reference. That one
+is network-dependent and is not part of the merge gate; see below.
 CI runs the same commands, and never executes a contributed verification command.
 
 ## CI gates
@@ -105,11 +106,18 @@ A PR merges only when all of these pass:
 | Path | `id` matches the file's location |
 | Prose lint | Injection shapes, markup, encoding, Unicode (security-model §3) |
 | Command lint | Allowlist / denylist / read-only invariant (§4); `suggest` is denylist-checked but not allowlist-checked |
-| References | `https://`, on the domain allowlist, returns 200 |
+| References | `https://`, on the domain allowlist |
 | Composition | Resolves cleanly; no duplicate ids; every suppression targets a real inherited check |
 | Subjectivity | `subjective: true` ⇒ `severity: optional`; otherwise `verify` present |
 
 CI never executes a contributed command. It validates shape only.
+
+Whether a reference still resolves is deliberately **not** one of these gates.
+It answers a different question, on a different clock: your change cannot break
+a link that a documentation site moved last month, and a gate that fails for
+reasons outside the contributor's control gets ignored. A scheduled workflow
+fetches every reference weekly and opens an issue when one has rotted. A host
+that rate-limits the checker is recorded as a warning, never as rot.
 
 ## Protected paths
 

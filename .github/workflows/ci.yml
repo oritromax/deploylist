@@ -32,9 +32,3 @@ jobs:
 
       - name: Build the published surface
         run: npm run build
-
-      # Network-dependent, so it runs separately and does not block on a flaky
-      # upstream during an unrelated change.
-      - name: Verify reference links resolve
-        run: node lint/index.js --check-links
-        continue-on-error: true
