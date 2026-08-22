@@ -12,6 +12,7 @@ import { loadLayers, lintLayer } from '../lint/index.js';
 import { lintStructure, resolve, sortChecks } from '../lint/compose.js';
 import { idToUrlStem } from '../lint/paths.js';
 import { renderMarkdown, renderJson, renderIndexJson, renderLlmsTxt, SEVERITIES } from './render.js';
+import { renderIndexHtml, renderStylesheet } from './page.js';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const DIST = join(ROOT, 'dist');
@@ -24,6 +25,15 @@ const CATEGORIES = ['security', 'secrets', 'config', 'performance', 'seo',
 // The host sets no CORS headers by default, and the whole product is agents
 // fetching these URLs, so a browser-context consumer needs the first line.
 //
+// One policy, site-wide. A per-path rule cannot loosen this: the host appends
+// matching rules rather than replacing them, the browser then enforces every
+// Content-Security-Policy header it receives, and a resource has to satisfy
+// all of them. Two policies can only ever be more restrictive than one.
+//
+// `style-src 'self'` exists for the landing page, the only document here that
+// renders. Everything else stays denied, scripts included -- the site has no
+// JavaScript of its own and nothing should be able to add any.
+//
 // The rest are the four headers universal.security-headers asks every site for,
 // kept here rather than in the CDN dashboard so they are version-controlled,
 // reviewable in a diff, and covered by CODEOWNERS. The site serves no HTML and
@@ -34,7 +44,7 @@ const CATEGORIES = ['security', 'secrets', 'config', 'performance', 'seo',
 const HEADERS = `/*
   Access-Control-Allow-Origin: *
   Cache-Control: public, max-age=600
-  Content-Security-Policy: default-src 'none'; frame-ancestors 'none'; base-uri 'none'
+  Content-Security-Policy: default-src 'none'; style-src 'self'; frame-ancestors 'none'; base-uri 'none'
   Referrer-Policy: no-referrer
   Strict-Transport-Security: max-age=15552000; includeSubDomains
   X-Content-Type-Options: nosniff
@@ -131,6 +141,10 @@ function main() {
     stacks: catalog,
   });
   emit('llms.txt', renderLlmsTxt(SITE, catalog.filter((c) => c.kind !== 'universal')));
+
+  // The page a person lands on. Everything on it comes from the catalog above.
+  emit('index.html', renderIndexHtml({ site: SITE, catalog, generated }));
+  emit('style.css', renderStylesheet());
 
   emitConfig('_headers', HEADERS);
 
